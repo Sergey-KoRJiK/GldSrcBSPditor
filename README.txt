@@ -3,9 +3,9 @@
 
 LICENSE of this project in thirdpartylegalnotices.txt 
 
-This program created for Edit Lightmaps of GldSrc BSP.
-Support import and export Lightmap textures on Face
-to Bitmap for each Styles on Face. 
+# This program created for Edit Lightmaps of GldSrc BSP. Support import and export Lightmap textures on Face to Bitmap for each Styles on Face. 
+
+### For download compiled standalone tool, click [here](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/raw/master/GoldSrcViewer.exe)
 
 The main goal - Color\Pixel Correction of calculated light after light compiler
 (bad color, bad black pixel, ... for fun color change). 
