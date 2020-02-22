@@ -1,9 +1,8 @@
-// Copyright (c) 2020 Sergey Smolovsky, Belarus
-// email: sergeysmol4444@mail.ru
+Copyright (c) 2020 Sergey Smolovsky, Belarus
+e-mail: sergeysmol4444@mail.ru
 
-LICENSE of this project in thirdpartylegalnotices.txt 
-
-# This program created for Edit Lightmaps of GldSrc BSP. Support import and export Lightmap textures on Face to Bitmap for each Styles on Face. 
+# This program created for Edit Lightmaps of GldSrc BSP. 
+Support import and export Lightmap textures on Face to Bitmap for each Styles on Face. 
 
 ### For download compiled standalone tool, click [here](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/raw/master/GoldSrcViewer.exe)
 
@@ -40,3 +39,5 @@ In Option up toolbar u can select which Faces need render
 render type (WallHack (XRay) or Default), select show/hode toolbars.
 
 Valid VisLeaf showed as Blue BBOX.
+
+LICENSE of this project in [thirdpartylegalnotices.txt](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/blob/master/LICENSES/thirdpartylegalnotices.txt) 
