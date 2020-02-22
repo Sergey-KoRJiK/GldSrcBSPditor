@@ -40,4 +40,4 @@ render type (WallHack (XRay) or Default), select show/hode toolbars.
 
 Valid VisLeaf showed as Blue BBOX.
 
-LICENSE of this project in [thirdpartylegalnotices.txt](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/blob/master/LICENSES/thirdpartylegalnotices.txt) 
+LICENSE of this project in [thirdpartylegalnotices.txt](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/blob/master/LICENSES/thirdpartylegalnotices.txt) and [Half Life 1 SDK LICENSE](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/blob/master/LICENSES/LICENSE%20HALF-LIFE%20SDK.txt)
