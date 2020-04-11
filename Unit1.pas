@@ -23,6 +23,7 @@ uses
   UnitOpenGLAdditional,
   UnitOpenGLFPSCamera,
   UnitRayTraceOpenGL,
+  UnitVSync,
   {}
   UnitVec,
   UnitMapHeader,
@@ -120,8 +121,9 @@ type
     { Private declarations }
   public
     HRC: HGLRC; // OpenGL
-    TimerFrequency: Int64;
-    deltaTime, lastFrame: GLfloat;
+    TimerFrequency: Int64; //[1 / second]
+    deltaTime, lastFrame: Integer; // [millisecond]
+    VSyncManager: CVSyncManager;
     Camera: CFirtsPersonViewCamera;
     FrustumVertecies: array[0..7] of tVec3d;
     FrustumPlanes: array[0..5] of tPlane;
@@ -165,8 +167,8 @@ const
   LeafRenderSecondColor: tColor4fv = (0.1, 0.7, 0.1, 0.1);
   MAX_TICKCOUNT: Integer = 10;
   //
-  MFrec: GLfloat = (Pi/180.0)/4.0;
-  CameraSpeed: GLfloat = 200.0;
+  MouseFreq: GLfloat = (Pi/180.0)/4.0; // [radian per pixel]
+  CameraSpeed: GLfloat = 0.2;
   //
   HelpStr: String = 'Rotate Camera: Left Mouse Button' + LF +
     'Move Camera forward/backward: keys W/S' + LF +
@@ -178,7 +180,7 @@ const
   AboutStr: String = 'Copyright (c) 2020 Sergey Smolovsky, Belarus' + LF +
     'email: sergeysmol4444@mail.ru' + LF +
     'GoldSrc BSP Editor' + LF +
-    'Program version: 1.0.1' + LF +
+    'Program version: 1.0.2' + LF +
     'Version of you OpenGL: ';
   MainFormCaption: String = 'GoldSrc BSP Editor';
 
@@ -213,8 +215,9 @@ begin
   Self.RenderFaceInfo.FilterMode:=GL_LINEAR;
 
   QueryPerformanceFrequency(Self.TimerFrequency);
-  Self.deltaTime:=0.0;
-  Self.lastFrame:=0.0;
+  Self.deltaTime:=0;
+  Self.lastFrame:=0;
+  Self.VSyncManager:=CVSyncManager.CreateVSyncManager(DefaultSyncInterval);
   Self.RayTracer:=CRayTracer.CreateRayTracer();
   Self.Camera:=CFirtsPersonViewCamera.CreateNewCamera(
     DefaultCameraPos,
@@ -581,7 +584,10 @@ begin
       for i:=0 to (Self.Bsp30.CountFaces - 1) do
         begin
           if (Self.FacesIndexToRender[i] = False) then Continue;
-          if (Self.RenderFaceInfo.Page >= Self.Bsp30.FaceInfos[i].CountLightStyles) then Continue;
+          if (Self.Bsp30.FaceInfos[i].CountLightStyles > 0) then
+            begin
+              if (Self.RenderFaceInfo.Page >= Self.Bsp30.FaceInfos[i].CountLightStyles) then Continue;
+            end;
 
           if (GetRayFaceIntersection(@Self.Bsp30.FaceInfos[i],
             Self.MouseRay, @tmpDist)) then
@@ -601,7 +607,10 @@ begin
       for i:=0 to (Self.Bsp30.CountFaces - 1) do
         begin
           if (Self.BrushIndexToRender[i] = False) then Continue;
-          if (Self.RenderFaceInfo.Page >= Self.Bsp30.FaceInfos[i].CountLightStyles) then Continue;
+          if (Self.Bsp30.FaceInfos[i].CountLightStyles > 0) then
+            begin
+              if (Self.RenderFaceInfo.Page >= Self.Bsp30.FaceInfos[i].CountLightStyles) then Continue;
+            end;
 
           if (GetRayFaceIntersection(@Self.Bsp30.FaceInfos[i],
             Self.MouseRay, @tmpDist)) then
@@ -639,16 +648,17 @@ end;
 procedure TMainForm.FormPaint(Sender: TObject);
 var
   i: Integer;
-  currentFrame: Int64;
-  tmp: GLfloat;
+  CurrentFrame: Integer; // [millisecond]
+  CurrentFrameLong: Int64; // internal counter
 begin
   {$R-}
-  QueryPerformanceCounter(currentFrame);
-  tmp:=currentFrame/Self.TimerFrequency;
-  deltaTime:=tmp - lastFrame;
-  lastFrame:=tmp;
+  QueryPerformanceCounter(CurrentFrameLong);
+  CurrentFrame:=(CurrentFrameLong*1000) div Self.TimerFrequency;
+  deltaTime:=CurrentFrame - lastFrame;
+  lastFrame:=CurrentFrame;
+  Self.VSyncManager.Synchronize(deltaTime);
 
-  do_movement(CameraSpeed*deltaTime);
+  do_movement(CameraSpeed*Self.VSyncManager.SyncInterval);
   Self.Camera.gluLookAtUpdate;
   Self.RayTracer.UpdateModelMatrix();
   glClear(glBufferClearBits);
@@ -657,7 +667,7 @@ begin
     begin
       if (Self.NoPVSMenu.Checked = False) then
         begin
-          // Render World Brush Faces
+          // Render World Brush Faces with lightmaps
           if (Self.WireframeWorldBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
           for i:=0 to (Self.Bsp30.CountFaces - 1) do
             begin
@@ -668,7 +678,17 @@ begin
             end;
           if (Self.WireframeWorldBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
 
-          // Render EntBrush Faces
+          // Render World Brush Faces without lightmaps
+          glPolygonMode(GL_BACK, GL_LINE);
+          for i:=0 to (Self.Bsp30.CountFaces - 1) do
+            begin
+              if (Self.FacesIndexToRender[i] = False) then Continue;
+
+              RenderFaceNoLmp(@Self.Bsp30.FaceInfos[i]);
+            end;
+          glPolygonMode(GL_BACK, GL_FILL);
+
+          // Render EntBrush Faces with lightmaps
           if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
           for i:=1 to (Self.Bsp30.CountFaces - 1) do
             begin
@@ -678,10 +698,20 @@ begin
               RenderFaceLmp(Self.RenderFaceInfo);
             end;
           if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
+
+          // Render EntBrush Faces without lightmaps
+          glPolygonMode(GL_BACK, GL_LINE);
+          for i:=0 to (Self.Bsp30.CountFaces - 1) do
+            begin
+              if (Self.BrushIndexToRender[i] = False) then Continue;
+
+              RenderFaceNoLmp(@Self.Bsp30.FaceInfos[i]);
+            end;
+          glPolygonMode(GL_BACK, GL_FILL);
         end
       else
         begin
-          // Render All Faces
+          // Render all Faces with lightmaps
           if (Self.WireframeWorldBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
           if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
           for i:=0 to (Self.Bsp30.CountFaces - 1) do
@@ -691,6 +721,14 @@ begin
             end;
           if (Self.WireframeWorldBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
           if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
+
+          // Render all Faced without lightmaps
+          glPolygonMode(GL_BACK, GL_LINE);
+          for i:=0 to (Self.Bsp30.CountFaces - 1) do
+            begin
+              RenderFaceNoLmp(@Self.Bsp30.FaceInfos[i]);
+            end;
+          glPolygonMode(GL_BACK, GL_FILL);
         end;
 
       // Render Selected Face
@@ -765,12 +803,10 @@ begin
     begin
       Self.tickCount:=MAX_TICKCOUNT;
 
-      Self.StatusBar.Panels.Items[0].Text:=' FPS '
-        + FloatToStrF(1.0/Self.deltaTime, ffFixed, 6, 1);
-      Self.StatusBar.Panels.Items[1].Text:=VecToStr(Self.Camera.ViewPosition);
+      Self.StatusBar.Panels.Items[0].Text:=VecToStr(Self.Camera.ViewPosition);
       if (Self.isBspLoad) then
         begin
-          Self.StatusBar.Panels.Items[2].Text:='Camera in Leaf: '
+          Self.StatusBar.Panels.Items[1].Text:='Camera in Leaf: '
             + IntToStr(Self.CameraLeafId);
         end;
       Self.StatusBar.Update;
@@ -817,12 +853,15 @@ begin
       isViewDirChanged:=False;
       if (X <> Self.mdx) then
         begin
-          Self.Camera.UpDateViewDirectionByMouseX((X - Self.mdx)*MFrec);
+          // MouseFreq -> [radian / pixel]
+          // (X - Self.mdx) -> [pixel]
+          // (X - Self.mdx)*MouseFreq -> [pixel]*[radian / pixel] -> [radian]
+          Self.Camera.UpDateViewDirectionByMouseX((X - Self.mdx)*MouseFreq);
           isViewDirChanged:=True;
         end;
       if (Y <> Self.mdy) then
         begin
-          Self.Camera.UpDateViewDirectionByMouseY((Self.mdy - Y)*MFrec);
+          Self.Camera.UpDateViewDirectionByMouseY((Self.mdy - Y)*MouseFreq);
           isViewDirChanged:=True;
         end;
 
@@ -881,7 +920,7 @@ begin
           Unit2.FaceToolForm.UpdateFaceVisualInfo();
         end;
 
-      Self.StatusBar.Panels.Items[3].Text:='Style page (0..3): '
+      Self.StatusBar.Panels.Items[2].Text:='Style page (0..3): '
         + IntToStr(Self.RenderFaceInfo.Page);
     end;
   {$R+}
@@ -987,8 +1026,8 @@ begin
   Self.RenderFaceInfo.lpFaceInfo:=nil;
   Self.RenderFaceInfo.Page:=0;
 
-  Self.StatusBar.Panels.Items[2].Text:='No map load';
-  Self.StatusBar.Panels.Items[3].Text:='Style page (0..3): 0';
+  Self.StatusBar.Panels.Items[1].Text:='No map load';
+  Self.StatusBar.Panels.Items[2].Text:='Style page (0..3): 0';
 
   if (Assigned(Unit2.FaceToolForm)) then
     begin
@@ -1389,6 +1428,7 @@ begin
 
   Self.Camera.DeleteCamera();
   Self.RayTracer.DeleteRayTracer();
+  Self.VSyncManager.DeleteVSyncManager();
   wglDeleteContext(Self.HRC);
   {$R+}
 end;

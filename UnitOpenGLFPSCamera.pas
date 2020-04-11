@@ -3,6 +3,7 @@ unit UnitOpenGLFPSCamera;
 // Copyright (c) 2019 Sergey Smolovsky, Belarus
 
 // First Person View OpenGL Camera class
+// All angle values in radians
 
 interface
 
@@ -28,11 +29,11 @@ type CFirtsPersonViewCamera = class
     procedure WrapCAlpha();
     procedure SetViewPosition(const Pos: tVec3f);
   public
-    property AzimutalAngle: GLfloat read CAlpha;
-    property PolarAngle: GLfloat read CBetta;
+    property AzimutalAngle: GLfloat read CAlpha; // [radian]
+    property PolarAngle: GLfloat read CBetta; // [radian]
     property ViewPosition: tVec3f read CPos write SetViewPosition;
-    property ViewDirection: tVec3f read CDir;
-    property DistToAxis: GLfloat read CDist;
+    property ViewDirection: tVec3f read CDir; // normalized
+    property DistToAxis: GLfloat read CDist;  // camera distance to (0, 0, 0) point
     //
     constructor CreateNewCamera(const Pos: tVec3f; const PolarAngle, AzimutalAngle: GLfloat);
     destructor DeleteCamera();
@@ -43,8 +44,8 @@ type CFirtsPersonViewCamera = class
     procedure StepLeft(const Dist: GLfloat);
     procedure StepRight(const Dist: GLfloat);
     //
-    procedure UpdateViewDirectionByMouseX(const AzimutalOffset: GLfloat);
-    procedure UpdateViewDirectionByMouseY(const PolarOffset: GLfloat);
+    procedure UpdateViewDirectionByMouseX(const AzimutalOffset: GLfloat); // [radian]
+    procedure UpdateViewDirectionByMouseY(const PolarOffset: GLfloat); // [radian]
     //
     procedure gluLookAtUpdate();
   end;

@@ -1,11 +1,11 @@
 object FaceToolForm: TFaceToolForm
-  Left = 1185
-  Top = 218
+  Left = 1599
+  Top = 232
   BorderIcons = []
   BorderStyle = bsDialog
   Caption = 'Face Tool'
-  ClientHeight = 324
-  ClientWidth = 212
+  ClientHeight = 390
+  ClientWidth = 209
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -35,7 +35,7 @@ object FaceToolForm: TFaceToolForm
   end
   object RadioGroupLmp: TRadioGroup
     Left = 0
-    Top = 240
+    Top = 312
     Width = 209
     Height = 57
     Caption = ' Save\Load Lightmaps '
@@ -44,21 +44,98 @@ object FaceToolForm: TFaceToolForm
   end
   object ButtonSaveLmp: TButton
     Left = 1
-    Top = 296
+    Top = 368
     Width = 104
-    Height = 25
+    Height = 22
     Caption = 'Save'
     TabOrder = 2
     OnClick = ButtonSaveLmpClick
   end
   object ButtonLoadLmp: TButton
     Left = 105
-    Top = 296
+    Top = 368
     Width = 104
-    Height = 25
+    Height = 22
     Caption = 'Load'
     TabOrder = 3
     OnClick = ButtonLoadLmpClick
+  end
+  object ButtonDelFull: TButton
+    Left = 1
+    Top = 232
+    Width = 104
+    Height = 20
+    Caption = 'Delete Lightmap'
+    Enabled = False
+    TabOrder = 4
+    OnClick = ButtonDelFullClick
+  end
+  object ButtonDel1: TButton
+    Left = 1
+    Top = 251
+    Width = 104
+    Height = 20
+    Caption = 'Delete Style 1'
+    Enabled = False
+    TabOrder = 5
+    OnClick = ButtonDel1Click
+  end
+  object ButtonDel2: TButton
+    Left = 1
+    Top = 270
+    Width = 104
+    Height = 20
+    Caption = 'Delete Style 2'
+    Enabled = False
+    TabOrder = 6
+    OnClick = ButtonDel2Click
+  end
+  object ButtonDel3: TButton
+    Left = 1
+    Top = 289
+    Width = 104
+    Height = 20
+    Caption = 'Delete Style 3'
+    Enabled = False
+    TabOrder = 7
+    OnClick = ButtonDel3Click
+  end
+  object ButtonCreateMain: TButton
+    Left = 105
+    Top = 232
+    Width = 104
+    Height = 20
+    Caption = 'Create Lightmap'
+    Enabled = False
+    TabOrder = 8
+    OnClick = ButtonCreateMainClick
+  end
+  object ButtonNew1: TButton
+    Left = 105
+    Top = 251
+    Width = 104
+    Height = 20
+    Caption = 'Create Style 1'
+    Enabled = False
+    TabOrder = 9
+  end
+  object ButtonNew2: TButton
+    Left = 105
+    Top = 270
+    Width = 104
+    Height = 20
+    Caption = 'Create Style 2'
+    Enabled = False
+    TabOrder = 10
+  end
+  object ButtonNew3: TButton
+    Left = 105
+    Top = 289
+    Width = 104
+    Height = 20
+    Caption = 'Create Style 3'
+    Enabled = False
+    TabOrder = 11
   end
   object OpenDialogBMP: TOpenDialog
     Filter = 'Bitmap 24-bit|*.bmp'

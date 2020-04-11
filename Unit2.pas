@@ -30,12 +30,25 @@ type
     RadioGroupLmp: TRadioGroup;
     ButtonSaveLmp: TButton;
     ButtonLoadLmp: TButton;
+    ButtonDelFull: TButton;
+    ButtonDel1: TButton;
+    ButtonDel2: TButton;
+    ButtonDel3: TButton;
+    ButtonCreateMain: TButton;
+    ButtonNew1: TButton;
+    ButtonNew2: TButton;
+    ButtonNew3: TButton;
     procedure FormCreate(Sender: TObject);
     //
     procedure UpdateFaceVisualInfo();
     procedure ClearFaceVisualInfo();
     procedure ButtonSaveLmpClick(Sender: TObject);
     procedure ButtonLoadLmpClick(Sender: TObject);
+    procedure ButtonDelFullClick(Sender: TObject);
+    procedure ButtonDel1Click(Sender: TObject);
+    procedure ButtonDel2Click(Sender: TObject);
+    procedure ButtonDel3Click(Sender: TObject);
+    procedure ButtonCreateMainClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -83,24 +96,43 @@ begin
       Self.ClearFaceVisualInfo();
       Exit;
     end;
+  Self.ButtonDelFull.Enabled:=False;
+  Self.ButtonDel1.Enabled:=False;
+  Self.ButtonDel2.Enabled:=False;
+  Self.ButtonDel3.Enabled:=False;
+
+  Self.ButtonCreateMain.Enabled:=False;
+  Self.ButtonNew1.Enabled:=False;
+  Self.ButtonNew2.Enabled:=False;
+  Self.ButtonNew3.Enabled:=False;
 
   Self.MemoFaceInfo.Lines.Clear();
   Self.MemoFaceInfo.Lines.BeginUpdate();
   Self.MemoFaceInfo.Lines.Append('Face Index:  ' + IntToStr(Self.FaceSelectedIndex));
   Self.MemoFaceInfo.Lines.Append('Texture: ' + Self.CurrFaceInfo.TexName);
+  Self.MemoFaceInfo.Lines.Append('');
   //
-  Self.MemoFaceInfo.Lines.Append('Lightmap Width:  ' + IntToStr(Self.CurrFaceInfo.LmpSize.X));
-  Self.MemoFaceInfo.Lines.Append('Lightmap Height: ' + IntToStr(Self.CurrFaceInfo.LmpSize.Y));
-  //
-  Self.MemoFaceInfo.Lines.Append('Count Styles: ' + IntToStr(Self.CurrFaceInfo.CountLightStyles));
-  Self.MemoFaceInfo.Lines.Append('Style[0]: ' + IntToStr(Self.CurrFace.nStyles[0])
-    + '; Unique: ' + BoolToStrYesNo(Self.CurrFaceInfo.isUniqueLmp[0]));
-  Self.MemoFaceInfo.Lines.Append('Style[1]: ' + IntToStr(Self.CurrFace.nStyles[1])
-    + '; Unique: ' + BoolToStrYesNo(Self.CurrFaceInfo.isUniqueLmp[1]));
-  Self.MemoFaceInfo.Lines.Append('Style[2]: ' + IntToStr(Self.CurrFace.nStyles[2])
-    + '; Unique: ' + BoolToStrYesNo(Self.CurrFaceInfo.isUniqueLmp[2]));
-  Self.MemoFaceInfo.Lines.Append('Style[3]: ' + IntToStr(Self.CurrFace.nStyles[3])
-    + '; Unique: ' + BoolToStrYesNo(Self.CurrFaceInfo.isUniqueLmp[3]));
+  if (Self.CurrFaceInfo.OffsetLmp >= 0) then
+    begin
+      Self.MemoFaceInfo.Lines.Append('Lightmap Width:  ' + IntToStr(Self.CurrFaceInfo.LmpSize.X));
+      Self.MemoFaceInfo.Lines.Append('Lightmap Height: ' + IntToStr(Self.CurrFaceInfo.LmpSize.Y));
+      //
+      Self.MemoFaceInfo.Lines.Append('Count Styles: ' + IntToStr(Self.CurrFaceInfo.CountLightStyles));
+      Self.MemoFaceInfo.Lines.Append('Style[0]: ' + IntToStr(Self.CurrFace.nStyles[0]));
+      Self.MemoFaceInfo.Lines.Append('Style[1]: ' + IntToStr(Self.CurrFace.nStyles[1]));
+      Self.MemoFaceInfo.Lines.Append('Style[2]: ' + IntToStr(Self.CurrFace.nStyles[2]));
+      Self.MemoFaceInfo.Lines.Append('Style[3]: ' + IntToStr(Self.CurrFace.nStyles[3]));
+      //
+      if (Self.CurrFaceInfo.CountLightStyles = 1) then Self.ButtonDelFull.Enabled:=True;
+      if (Self.CurrFaceInfo.CountLightStyles > 1) then Self.ButtonDel1.Enabled:=True;
+      if (Self.CurrFaceInfo.CountLightStyles > 2) then Self.ButtonDel2.Enabled:=True;
+      if (Self.CurrFaceInfo.CountLightStyles > 3) then Self.ButtonDel3.Enabled:=True;
+    end
+  else
+    begin
+      Self.MemoFaceInfo.Lines.Append('Face dont have lightmaps');
+      Self.ButtonCreateMain.Enabled:=True;
+    end;
   //
   Self.MemoFaceInfo.Lines.Append('');
   Self.MemoFaceInfo.Lines.Append('TexInfo Index:  ' + IntToStr(Self.CurrFace.iTextureInfo));
@@ -130,6 +162,16 @@ begin
 
   Self.MemoFaceInfo.Lines.Clear();
   Self.RadioGroupLmp.Items.Clear();
+
+  Self.ButtonDelFull.Enabled:=False;
+  Self.ButtonDel1.Enabled:=False;
+  Self.ButtonDel2.Enabled:=False;
+  Self.ButtonDel3.Enabled:=False;
+
+  Self.ButtonCreateMain.Enabled:=False;
+  Self.ButtonNew1.Enabled:=False;
+  Self.ButtonNew2.Enabled:=False;
+  Self.ButtonNew3.Enabled:=False;
   {$R+}
 end;
 
@@ -178,6 +220,63 @@ begin
           Self.UpdateFaceVisualInfo();
         end;
     end;
+  {$R+}
+end;
+
+procedure TFaceToolForm.ButtonDelFullClick(Sender: TObject);
+begin
+  {$R-}
+  Self.ButtonDelFull.Enabled:=False;
+  Self.ButtonDel1.Enabled:=False;
+  Self.ButtonDel2.Enabled:=False;
+  Self.ButtonDel3.Enabled:=False;
+
+  UnitFace.DeleteLightmapFromFace(Self.CurrFaceInfo, Self.CurrFace, 3);
+  UnitFace.DeleteLightmapFromFace(Self.CurrFaceInfo, Self.CurrFace, 2);
+  UnitFace.DeleteLightmapFromFace(Self.CurrFaceInfo, Self.CurrFace, 1);
+  UnitFace.DeleteLightmapFromFace(Self.CurrFaceInfo, Self.CurrFace, 0);
+
+  Self.UpdateFaceVisualInfo();
+  {$R+}
+end;
+
+procedure TFaceToolForm.ButtonDel1Click(Sender: TObject);
+begin
+  {$R-}
+  Self.ButtonDel1.Enabled:=False;
+
+  UnitFace.DeleteLightmapFromFace(Self.CurrFaceInfo, Self.CurrFace, 1);
+  Self.UpdateFaceVisualInfo();
+  {$R+}
+end;
+
+procedure TFaceToolForm.ButtonDel2Click(Sender: TObject);
+begin
+  {$R-}
+  Self.ButtonDel2.Enabled:=False;
+
+  UnitFace.DeleteLightmapFromFace(Self.CurrFaceInfo, Self.CurrFace, 2);
+  Self.UpdateFaceVisualInfo();
+  {$R+}
+end;
+
+procedure TFaceToolForm.ButtonDel3Click(Sender: TObject);
+begin
+  {$R-}
+  Self.ButtonDel3.Enabled:=False;
+
+  UnitFace.DeleteLightmapFromFace(Self.CurrFaceInfo, Self.CurrFace, 3);
+  Self.UpdateFaceVisualInfo();
+  {$R+}
+end;
+
+procedure TFaceToolForm.ButtonCreateMainClick(Sender: TObject);
+begin
+  {$R-}
+  Self.ButtonCreateMain.Enabled:=False;
+
+  CreateLightmapForFace(Self.CurrFaceInfo, Self.CurrFace);
+  Self.UpdateFaceVisualInfo();
   {$R+}
 end;
 

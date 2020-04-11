@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 441
-  Top = 220
+  Left = 380
+  Top = 215
   Width = 752
   Height = 533
   Caption = 'MainForm'
@@ -32,10 +32,6 @@ object MainForm: TMainForm
     Width = 736
     Height = 19
     Panels = <
-      item
-        Text = ' FPS'
-        Width = 70
-      end
       item
         Text = 'Pos: (X Y Z)'
         Width = 155

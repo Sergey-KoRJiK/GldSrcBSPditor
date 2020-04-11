@@ -21,7 +21,8 @@ uses
   UnitEdge in 'Modules\UnitEdge.pas',
   UnitBrushModel in 'Modules\UnitBrushModel.pas',
   UnitRayTraceOpenGL in 'UnitRayTraceOpenGL.pas',
-  Unit2 in 'Unit2.pas' {FaceToolForm};
+  Unit2 in 'Unit2.pas' {FaceToolForm},
+  UnitVSync in 'UnitVSync.pas';
 
 {$R *.res}
 var
