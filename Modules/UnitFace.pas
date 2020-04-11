@@ -81,12 +81,15 @@ type tErrLmpBitmap = (
 
 
 procedure UpdateFaceUniqueLightmaps(const lpFaceInfo: PFaceInfo; const Page: Integer);
+procedure DeleteLightmapFromFace(const lpFaceInfo: PFaceInfo; const lpFace: PFace; const Page: Integer);
+procedure CreateLightmapForFace(const lpFaceInfo: PFaceInfo; const lpFace: PFace);
 
 procedure SaveLightmapToBitmap(const FileName: String; const lpFaceInfo: PFaceInfo; const Page: Integer);
 function LoadLightmapFromBitmap(const FileName: String; const lpFaceInfo: PFaceInfo; const Page: Integer): tErrLmpBitmap;
 function ShowErrorLoadLightmapFromBitmap(const elbError: tErrLmpBitmap): String;
 
 procedure CreateLightmapTexture(const lpFaceInfo: PFaceInfo; const Page: Integer);
+procedure RenderFaceNoLmp(const lpFaceInfo: PFaceInfo);
 procedure RenderFaceLmp(const RenderInfo: tRenderFaceInfo);
 procedure RenderSelectedFace(const RenderInfo: tRenderFaceInfo; const lpColor: tColor4fv);
 
@@ -295,6 +298,26 @@ begin
   {$R+}
 end;
 
+procedure RenderFaceNoLmp(const lpFaceInfo: PFaceInfo);
+begin
+  {$R-}
+  // Render face without lightmaps as red wireframe
+  if (lpFaceInfo.CountLightStyles <= 0) then
+    begin
+      glEnableClientState(GL_VERTEX_ARRAY);
+
+      glColor4fv(@RedColor4f[0]);
+      glBindTexture(GL_TEXTURE_2D, 0);
+
+      glVertexPointer(3, GL_FLOAT, 0, @lpFaceInfo.Vertex[0].x);
+      glDrawArrays(GL_TRIANGLE_FAN, 0, lpFaceInfo.CountVertex);
+
+      glDisableClientState(GL_VERTEX_ARRAY);
+      Exit;
+    end;
+  {$R+}
+end;
+
 procedure RenderFaceLmp(const RenderInfo: tRenderFaceInfo);
 var
   lpFaceInfo: PFaceInfo;
@@ -347,7 +370,10 @@ begin
   {$R-}
   if (RenderInfo.Page < 0) then Exit;
   lpFaceInfo:=RenderInfo.lpFaceInfo;
-  if (RenderInfo.Page >= lpFaceInfo.CountLightStyles) then Exit;
+  if (lpFaceInfo.CountLightStyles > 0) then
+    begin
+      if (RenderInfo.Page >= lpFaceInfo.CountLightStyles) then Exit;
+    end;
 
   glEnableClientState(GL_VERTEX_ARRAY);
 
@@ -373,11 +399,11 @@ begin
   // Based on: Moller, Tomas; Trumbore, Ben (1997). "Fast, Minimum Storage 
   // Ray-Triangle Intersection". Journal of Graphics Tools. 2: 21–28. 
   
-  if (lpFaceInfo.CountLightStyles = 0) then
+  {if (lpFaceInfo.CountLightStyles = 0) then
     begin
       Result:=False;
       Exit;
-    end;
+    end; //}
   
   tmp:=Ray.Dir.X*lpFaceInfo.Plane.vNormal.x + Ray.Dir.Y*lpFaceInfo.Plane.vNormal.y
     + Ray.Dir.Z*lpFaceInfo.Plane.vNormal.z;
@@ -442,5 +468,112 @@ begin
   Result:=False;
   {$R+}
 end;
+
+procedure DeleteLightmapFromFace(const lpFaceInfo: PFaceInfo; const lpFace: PFace; const Page: Integer);
+begin
+  {$R-}
+  if (lpFaceInfo.CountLightStyles <= 0) then Exit;
+  if (Page < 0) then Exit;
+  if (Page >= lpFaceInfo.CountLightStyles) then Exit;
+
+  if (lpFaceInfo.CountLightStyles = 1) then
+    begin
+      // user can delete only one main page;
+      // firstly set lightmap offset to -1 and count styles to 0
+      lpFaceInfo.CountLightStyles:=0;
+      lpFaceInfo.OffsetLmp:=-1;
+
+      // next delete OpenGL textures and lightmap data
+      glDeleteTextures(4, @lpFaceInfo.LmpPages[0]);
+      SetLength(lpFaceInfo.Lightmaps[0], 0);
+
+      // mark unused styles
+      PDWORD(@lpFace.nStyles[0])^:=$FFFFFFFF;
+      Exit;
+    end;
+
+  // User cant delete main page if exist other Styles.
+  // Need delete all custom styles and only next delete main style
+  if (Page = 0) then Exit;
+
+  Dec(lpFaceInfo.CountLightStyles);
+
+  // delete texture and shift upper textures to down
+  glDeleteTextures(1, @lpFaceInfo.LmpPages[Page]);
+  SetLength(lpFaceInfo.Lightmaps[Page], 0);
+
+  if (Page = 3) then
+    begin
+      // clear page 3 fields
+      lpFaceInfo.lpFirstLightmap[3]:=nil;
+      lpFaceInfo.isUniqueLmp[2]:=False;
+      lpFaceInfo.UniqueHash[2]:=-1;
+      lpFace.nStyles[3]:=$FF;
+
+      Exit;
+    end;
+
+  if (Page = 2) then
+    begin
+      // shift page 3 to deleted page 2
+      lpFaceInfo.LmpPages[2]:=lpFaceInfo.LmpPages[3];
+      Pointer(lpFaceInfo.Lightmaps[2]):=Pointer(lpFaceInfo.Lightmaps[3]);
+
+      lpFaceInfo.lpFirstLightmap[2]:=lpFaceInfo.lpFirstLightmap[3];
+      lpFaceInfo.isUniqueLmp[2]:=lpFaceInfo.isUniqueLmp[3];
+      lpFaceInfo.UniqueRenderColor[2]:=lpFaceInfo.UniqueRenderColor[3];
+      lpFaceInfo.UniqueHash[2]:=lpFaceInfo.UniqueHash[3];
+
+      lpFace.nStyles[2]:=lpFace.nStyles[3];
+      lpFace.nStyles[3]:=$FF;
+      
+      Exit;
+    end;
+
+  if (Page = 1) then
+    begin
+      // shift page 2 to deleted page 1
+      lpFaceInfo.LmpPages[1]:=lpFaceInfo.LmpPages[2];
+      Pointer(lpFaceInfo.Lightmaps[1]):=Pointer(lpFaceInfo.Lightmaps[2]);
+
+      lpFaceInfo.lpFirstLightmap[1]:=lpFaceInfo.lpFirstLightmap[2];
+      lpFaceInfo.isUniqueLmp[1]:=lpFaceInfo.isUniqueLmp[2];
+      lpFaceInfo.UniqueRenderColor[1]:=lpFaceInfo.UniqueRenderColor[2];
+      lpFaceInfo.UniqueHash[1]:=lpFaceInfo.UniqueHash[2];
+
+      lpFace.nStyles[1]:=lpFace.nStyles[2];
+
+      // shift page 3 do shifted page 2
+      lpFaceInfo.LmpPages[2]:=lpFaceInfo.LmpPages[3];
+      Pointer(lpFaceInfo.Lightmaps[2]):=Pointer(lpFaceInfo.Lightmaps[3]);
+
+      lpFaceInfo.lpFirstLightmap[2]:=lpFaceInfo.lpFirstLightmap[3];
+      lpFaceInfo.isUniqueLmp[2]:=lpFaceInfo.isUniqueLmp[3];
+      lpFaceInfo.UniqueRenderColor[2]:=lpFaceInfo.UniqueRenderColor[3];
+      lpFaceInfo.UniqueHash[2]:=lpFaceInfo.UniqueHash[3];
+
+      lpFace.nStyles[2]:=lpFace.nStyles[3];
+      lpFace.nStyles[3]:=$FF;
+    end;  
+  {$R+}
+end;
+
+procedure CreateLightmapForFace(const lpFaceInfo: PFaceInfo; const lpFace: PFace);
+begin
+  {$R-}
+  if (lpFaceInfo.OffsetLmp >= 0) then Exit;
+  lpFaceInfo.OffsetLmp:=0;
+
+  lpFaceInfo.CountLightStyles:=1;
+  lpFace.nStyles[0]:=0;
+  SetLength(lpFaceInfo.Lightmaps[0], lpFaceInfo.LmpSquare);
+  //FillChar(lpFaceInfo.Lightmaps[0][0], lpFaceInfo.LmpSquare*SizeOfRGB888, $FF);
+  lpFaceInfo.lpFirstLightmap[0]:=@lpFaceInfo.Lightmaps[0][0];
+
+  UpdateFaceUniqueLightmaps(lpFaceInfo, 0);
+  CreateLightmapTexture(lpFaceInfo, 0); //}
+  {$R+}
+end;
+
 
 end.

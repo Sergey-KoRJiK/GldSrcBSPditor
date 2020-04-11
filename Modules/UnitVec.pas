@@ -103,6 +103,7 @@ const
   RGB888_WHITE: tRGB888 = (r: 255; g: 255; b: 255);
   //
   WhiteColor4f: tColor4fv = (1.0, 1.0, 1.0, 1.0);
+  RedColor4f: tColor4fv = (0.8, 0.1, 0.1, 0.5);
 
 
 procedure ZeroFillChar(const Buffer: PByte; const SizeBuffer: Integer);

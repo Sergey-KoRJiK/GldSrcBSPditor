@@ -1028,6 +1028,8 @@ begin
   if ((lpFace.nStyles[2] <> $FF) and (lpFace.nStyles[2] <> $00)) then Inc(lpFaceInfo.CountLightStyles);
   if ((lpFace.nStyles[3] <> $FF) and (lpFace.nStyles[3] <> $00)) then Inc(lpFaceInfo.CountLightStyles);
 
+  if ((lpFaceInfo.CountLightStyles = 0) and (lpFaceInfo.OffsetLmp >= 0)) then Inc(lpFaceInfo.CountLightStyles);
+
   // Unpack Lightmaps, create Render Textures
   for i:=0 to (lpFaceInfo.CountLightStyles - 1) do
     begin
@@ -1045,6 +1047,9 @@ begin
       CreateLightmapTexture(lpFaceInfo, i);
       Inc(Map.CountUnpackedLightmaps, lpFaceInfo.LmpSquare);
     end;
+
+  // After loaded lightmaps, mark offset for RAW Face data to -1
+  lpFace.nLightmapOffset:=-1;
   {$R+}
 end;
 
