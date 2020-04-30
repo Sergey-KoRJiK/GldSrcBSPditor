@@ -122,7 +122,7 @@ type
   public
     HRC: HGLRC; // OpenGL
     TimerFrequency: Int64; //[1 / second]
-    deltaTime, lastFrame: Integer; // [millisecond]
+    deltaTime, lastFrame: Int64; // [millisecond]
     VSyncManager: CVSyncManager;
     Camera: CFirtsPersonViewCamera;
     FrustumVertecies: array[0..7] of tVec3d;
@@ -193,6 +193,8 @@ uses Unit2;
 
 
 procedure TMainForm.FormCreate(Sender: TObject);
+var
+  CurrentFrameLong: Int64;
 begin
   {$R-}
   Self.Caption:=MainFormCaption;
@@ -241,6 +243,9 @@ begin
   Self.FaceSelectedColor[3]:=0.3;
 
   Self.UpdateOpenGLViewport(MaxRender);
+  
+  QueryPerformanceCounter(CurrentFrameLong);
+  Self.lastFrame:=Int64((CurrentFrameLong*1000) div Self.TimerFrequency);
   {$R+}
 end;
 
@@ -648,14 +653,13 @@ end;
 procedure TMainForm.FormPaint(Sender: TObject);
 var
   i: Integer;
-  CurrentFrame: Integer; // [millisecond]
   CurrentFrameLong: Int64; // internal counter
 begin
   {$R-}
   QueryPerformanceCounter(CurrentFrameLong);
-  CurrentFrame:=(CurrentFrameLong*1000) div Self.TimerFrequency;
-  deltaTime:=CurrentFrame - lastFrame;
-  lastFrame:=CurrentFrame;
+  CurrentFrameLong:=Int64((CurrentFrameLong*1000) div Self.TimerFrequency);
+  deltaTime:=CurrentFrameLong - lastFrame;
+  lastFrame:=CurrentFrameLong;
   Self.VSyncManager.Synchronize(deltaTime);
 
   do_movement(CameraSpeed*Self.VSyncManager.SyncInterval);
