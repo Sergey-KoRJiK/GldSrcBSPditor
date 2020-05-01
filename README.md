@@ -3,6 +3,7 @@ e-mail: sergeysmol4444@mail.ru
 
 # This program created for Edit Lightmaps of GldSrc BSP. 
 Support import and export Lightmap textures on Face to Bitmap for each Styles on Face. 
+Support delete and create Lightmap styles on Face. (Full delete lightmap or few selected styles. Create only style 0).
 
 ### For download compiled standalone tool, click [here](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/raw/master/GoldSrcViewer.exe)
 
@@ -18,7 +19,7 @@ For make it:
  - import Bitmap
  - go File->Save BSP.
  
-also tool contain import\export of all lightmaps in map to one big Bitmap.
+also tool contain delete\create styles and import\export of all lightmaps in map to one big Bitmap.
 It if u need global color correction for lightmaps.
  
 Camera help:
