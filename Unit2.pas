@@ -149,6 +149,8 @@ begin
       Self.RadioGroupLmp.Items.Append(StyleStr[i]);
     end;
   Self.RadioGroupLmp.ItemIndex:=Self.SelectedStyle;
+
+  Self.Update();
   {$R+}
 end;
 
@@ -172,6 +174,8 @@ begin
   Self.ButtonNew1.Enabled:=False;
   Self.ButtonNew2.Enabled:=False;
   Self.ButtonNew3.Enabled:=False;
+
+  Self.Update();
   {$R+}
 end;
 

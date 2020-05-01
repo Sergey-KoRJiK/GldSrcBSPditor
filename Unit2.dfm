@@ -1,6 +1,6 @@
 object FaceToolForm: TFaceToolForm
-  Left = 1599
-  Top = 232
+  Left = 1134
+  Top = 269
   BorderIcons = []
   BorderStyle = bsDialog
   Caption = 'Face Tool'

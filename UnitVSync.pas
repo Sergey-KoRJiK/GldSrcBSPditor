@@ -7,18 +7,22 @@ interface
 uses SysUtils, Windows, Classes;
 
 const
-  DefaultSyncInterval: Integer = 17;
+  MinSyncInterval: Integer = 16; // [millisecond], 16 ms = 62.5 FPS
 
 type CVSyncManager = class
   private
-    Interval: Integer;
+    Interval: Integer; // [millisecond]
+    DeltaTime, LastTime, CurrentTime: Int64; // [millisecond]
+    TickPeriod: Int64; // [1 / second]
+    CurrentTickCount: Int64; // [Tick]
   public
     property SyncInterval: Integer read Interval;
+    property DeltaTimeMs: Int64 read DeltaTime;
     //
     constructor CreateVSyncManager(const SyncIntervalMillisecond: Integer);
     destructor DeleteVSyncManager();
     //
-    procedure Synchronize(const deltaTimeMillisecond: Integer);
+    procedure Synchronize();
   end;
 
 
@@ -31,8 +35,13 @@ begin
   inherited;
 
   Self.Interval:=SyncIntervalMillisecond;
-  if (Self.Interval <= 0) then Self.Interval:=DefaultSyncInterval;
+  if (Self.Interval < MinSyncInterval) then Self.Interval:=MinSyncInterval;
 
+  QueryPerformanceFrequency(Self.TickPeriod);
+  QueryPerformanceCounter(Self.CurrentTickCount);
+  Self.CurrentTime:=(Self.CurrentTickCount*1000) div Self.TickPeriod;
+  Self.LastTime:=Self.CurrentTime;
+  Self.DeltaTime:=0;
   {$R+}
 end;
 
@@ -43,12 +52,22 @@ begin
   {$R+}
 end;
 
-procedure CVSyncManager.Synchronize(const deltaTimeMillisecond: Integer);
+procedure CVSyncManager.Synchronize();
+var
+  tmpInt32: Integer;
 begin
   {$R-}
-  if (deltaTimeMillisecond <= Self.Interval) then
+  QueryPerformanceCounter(Self.CurrentTickCount);
+  Self.CurrentTime:=(Self.CurrentTickCount*1000) div Self.TickPeriod;
+  Self.DeltaTime:=Self.CurrentTime - Self.LastTime;
+  Self.LastTime:=Self.CurrentTime;
+
+  if ((Self.DeltaTime > $7FFFFFFF) or (Self.DeltaTime < 0)) then tmpInt32:=0
+  else tmpInt32:=Self.DeltaTime;
+
+  if (tmpInt32 < Self.Interval) then
     begin
-      Sleep(Self.Interval - deltaTimeMillisecond);
+      Sleep(Self.Interval - tmpInt32);
     end;
   {$R+}
 end;

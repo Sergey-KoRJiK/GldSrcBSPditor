@@ -121,8 +121,6 @@ type
     { Private declarations }
   public
     HRC: HGLRC; // OpenGL
-    TimerFrequency: Int64; //[1 / second]
-    deltaTime, lastFrame: Int64; // [millisecond]
     VSyncManager: CVSyncManager;
     Camera: CFirtsPersonViewCamera;
     FrustumVertecies: array[0..7] of tVec3d;
@@ -180,7 +178,7 @@ const
   AboutStr: String = 'Copyright (c) 2020 Sergey Smolovsky, Belarus' + LF +
     'email: sergeysmol4444@mail.ru' + LF +
     'GoldSrc BSP Editor' + LF +
-    'Program version: 1.0.2' + LF +
+    'Program version: 1.0.3' + LF +
     'Version of you OpenGL: ';
   MainFormCaption: String = 'GoldSrc BSP Editor';
 
@@ -193,8 +191,6 @@ uses Unit2;
 
 
 procedure TMainForm.FormCreate(Sender: TObject);
-var
-  CurrentFrameLong: Int64;
 begin
   {$R-}
   Self.Caption:=MainFormCaption;
@@ -216,10 +212,7 @@ begin
   Self.RenderFaceInfo.Page:=0;
   Self.RenderFaceInfo.FilterMode:=GL_LINEAR;
 
-  QueryPerformanceFrequency(Self.TimerFrequency);
-  Self.deltaTime:=0;
-  Self.lastFrame:=0;
-  Self.VSyncManager:=CVSyncManager.CreateVSyncManager(DefaultSyncInterval);
+  Self.VSyncManager:=CVSyncManager.CreateVSyncManager(MinSyncInterval);
   Self.RayTracer:=CRayTracer.CreateRayTracer();
   Self.Camera:=CFirtsPersonViewCamera.CreateNewCamera(
     DefaultCameraPos,
@@ -243,9 +236,6 @@ begin
   Self.FaceSelectedColor[3]:=0.3;
 
   Self.UpdateOpenGLViewport(MaxRender);
-  
-  QueryPerformanceCounter(CurrentFrameLong);
-  Self.lastFrame:=Int64((CurrentFrameLong*1000) div Self.TimerFrequency);
   {$R+}
 end;
 
@@ -653,16 +643,11 @@ end;
 procedure TMainForm.FormPaint(Sender: TObject);
 var
   i: Integer;
-  CurrentFrameLong: Int64; // internal counter
 begin
   {$R-}
-  QueryPerformanceCounter(CurrentFrameLong);
-  CurrentFrameLong:=Int64((CurrentFrameLong*1000) div Self.TimerFrequency);
-  deltaTime:=CurrentFrameLong - lastFrame;
-  lastFrame:=CurrentFrameLong;
-  Self.VSyncManager.Synchronize(deltaTime);
-
+  Self.VSyncManager.Synchronize();
   do_movement(CameraSpeed*Self.VSyncManager.SyncInterval);
+  
   Self.Camera.gluLookAtUpdate;
   Self.RayTracer.UpdateModelMatrix();
   glClear(glBufferClearBits);
@@ -794,12 +779,6 @@ begin
     begin
       InvalidateRect(Self.Handle, nil, False);
       SwapBuffers(Self.Canvas.Handle);
-    end
-  else
-    begin
-      Self.Canvas.Font.Height:=24;
-      Self.Canvas.TextOut((Self.ClientWidth div 2) - 200, (Self.ClientHeight div 2) - 20,
-        'CLICK ON FORM FOR ACTIVE RENDER SCENCE');
     end;
 
   Dec(Self.tickCount);
@@ -814,11 +793,6 @@ begin
             + IntToStr(Self.CameraLeafId);
         end;
       Self.StatusBar.Update;
-
-      if (Assigned(Unit2.FaceToolForm)) then
-        begin
-          Unit2.FaceToolForm.Update();
-        end;
     end;
   {$R+}
 end;
