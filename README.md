@@ -7,6 +7,9 @@ Support delete and create Lightmap styles on Face. (Full delete lightmap or few 
 
 ### For download compiled standalone tool, click [here](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/raw/master/GoldSrcViewer.exe)
 
+# Requirements: OpenGL 1.2+; CPU x86 + FPU x87; ~128MB RAM; ~32MB GPU RAM; Win XP or great;
+(OpenGL 3.0+ version with multi-textures, VAO and shaders coming soon)
+
 The main goal - Color\Pixel Correction of calculated light after light compiler
 (bad color, bad black pixel, ... for fun color change). 
 For make it:
