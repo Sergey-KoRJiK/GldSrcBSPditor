@@ -5,7 +5,7 @@ e-mail: sergeysmol4444@mail.ru
 Support import and export Lightmap textures on Face to Bitmap for each Styles on Face. 
 Support delete and create Lightmap styles on Face. (Full delete lightmap or few selected styles. Create only style 0).
 
-### For download compiled standalone tool, click [here](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/raw/master/GoldSrcViewer.exe)
+### For download compiled standalone tool, click [here](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/raw/master/GoldSrcViewerTest.exe)
 
 Requirements: OpenGL 1.3+; CPU x86 + FPU x87; ~128MB RAM; ~32MB GPU RAM; Win 2000 or great;
 
