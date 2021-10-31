@@ -27,8 +27,7 @@ vTx*Vx2 + vTy*Vy2 + vTz*Vz2 = t2 - fT;
      [Vx0  Vy0  Vz0]        [ vSx ]        [ vTx ]
  V = [Vx1  Vy1  Vz1];  vS = [ vSy ];  vT = [ vTy ];
      [Vx2  Vy2  Vz2]        [ vSz ]        [ vTz ]
-      
-			[ s0 - fS ]        [ t0 - fT ]
+      [ s0 - fS ]        [ t0 - fT ]
  Bs = [ s1 - fS ];  Bt = [ t1 - fT ];
       [ s2 - fS ]        [ t2 - fT ]
 
