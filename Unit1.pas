@@ -16,16 +16,26 @@ uses
   Dialogs,
   Menus,
   ComCtrls,
+  ExtCtrls,
+  StdCtrls,
   {}
+  Math,
   OpenGL,
-  EXTOpengl32Glew32,
+  UnitOpenGLext,
+  UnitUserTypes,
+  UnitVec,
   {}
+  UnitQueryPerformanceTimer,
+	UnitRenderTimerManager,
+	UnitRenderingContextManager,
   UnitOpenGLAdditional,
   UnitOpenGLFPSCamera,
-  UnitRayTraceOpenGL,
-  UnitVSync,
+	UnitShaderManager,
+	UnitVertexBufferArrayManager,
+  UnitMegatextureManager,
+  UnitBasetextureManager,
+  UnitOpenGLErrorManager,
   {}
-  UnitVec,
   UnitMapHeader,
   UnitBSPstruct,
   UnitEntity,
@@ -33,10 +43,12 @@ uses
   UnitTexture,
   UnitNode,
   UnitFace,
+  UnitClipNode,
   UnitVisLeaf,
   UnitMarkSurface,
   UnitEdge,
-  UnitBrushModel;
+  UnitBrushModel,
+  UnitLightEntity, Grids, ValEdit;
 
 type
   TMainForm = class(TForm)
@@ -51,47 +63,86 @@ type
     LoadMapMenu: TMenuItem;
     CloseMapMenu: TMenuItem;
     LineSplitOptionsMenu: TMenuItem;
-    ShowHeader1: TMenuItem;
-    ShowWorldBrushesMenu: TMenuItem;
-    ShowEntBrushesMenu: TMenuItem;
-    WireframeWorldBrushesMenu: TMenuItem;
+    ShowHeaderMenu: TMenuItem;
     WireframeEntBrushesMenu: TMenuItem;
-    WallhackRenderModeMenu: TMenuItem;
-    StatusBar: TStatusBar;
     SaveMapMenu: TMenuItem;
-    PixelModeMenu: TMenuItem;
     ColorDialog: TColorDialog;
-    SetSelectedFaceColor1: TMenuItem;
+    SetSelectedFaceColorMenu: TMenuItem;
     LineSplitFileMenu: TMenuItem;
-    SaveallLightmapsMenu: TMenuItem;
-    LoadallLightmapsMenu: TMenuItem;
     OpenDialogBMP: TOpenDialog;
     SaveDialogBMP: TSaveDialog;
-    NoPVSMenu: TMenuItem;
-    RenderBBOXVisLeaf1: TMenuItem;
-    ToolBarMenu: TMenuItem;
-    ToolFaceMenu: TMenuItem;
-    //
-    procedure UpdateOpenGLViewport(const zFar: GLdouble);
-    procedure GetFrustum();
-    function isNotFaceFrustumIntersection(const lpFaceInfo: PFaceInfo): Boolean;
-    function isNotFrustumBBoxIntersection(const BBOXf: tBBOXf): Boolean;
-    procedure GetRenderList();
+    RenderBBOXVisLeaf: TMenuItem;
+    FaceCullingMenu: TMenuItem;
+    OcclusionMenu: TMenuItem;
+    RenderMenu: TMenuItem;
+    PanelRT: TPanel;
+    PanelFaceInfo: TPanel;
+    RadioGroupLmp: TRadioGroup;
+    ButtonSaveLmp: TButton;
+    ButtonLoadLmp: TButton;
+    LabelCameraPos: TLabel;
+    LabelCameraLeafId: TLabel;
+    LabelStylePage: TLabel;
+    LabelCameraFPS: TLabel;
+    GroupBoxFaceInfo: TGroupBox;
+    LabelFaceIndex: TStaticText;
+    EditFaceIndex: TStaticText;
+    LabelFaceBrushIndex: TStaticText;
+    EditFaceBrushIndex: TStaticText;
+    LabelFacePlaneIndex: TStaticText;
+    EditFacePlaneIndex: TStaticText;
+    LabelFaceCountVertex: TStaticText;
+    EditFaceCountVertex: TStaticText;
+    GroupBoxTextureInfo: TGroupBox;
+    LabelTexName: TStaticText;
+    EditTexName: TStaticText;
+    EditTexSize: TStaticText;
+    LabelTexSize: TStaticText;
+    LabelFaceTexInfo: TStaticText;
+    EditFaceTexInfo: TStaticText;
+    ImagePreviewBT: TImage;
+    GroupBoxLightmapInfo: TGroupBox;
+    LabelLmpSize: TStaticText;
+    EditLmpSize: TStaticText;
+    LabelLmpStyle1: TStaticText;
+    EditLmpStyle1: TStaticText;
+    LabelLmpStyle2: TStaticText;
+    EditLmpStyle2: TStaticText;
+    EditLmpStyle3: TStaticText;
+    LabelLmpStyle3: TStaticText;
+    LmpPixelModeMenu: TMenuItem;
+    SetWireframeFaceColorMenu: TMenuItem;
+    WireframeHighlighEntBrushesMenu: TMenuItem;
+    CloseMenu: TMenuItem;
+    DisableLightmapsMenu: TMenuItem;
+    DisableTexturesMenu: TMenuItem;
+    LabelTexWAD: TStaticText;
+    EditTexWAD: TStaticText;
+    ShowOpenGLInformationMenu: TMenuItem;
+    GotoMenu: TMenuItem;
+    GotoCamPosSubMenu: TMenuItem;
+    GotoFaceIdSubmenu: TMenuItem;
+    GotoVisLeafIdSubMenu: TMenuItem;
+    GotoBModelIdSubMenu: TMenuItem;
+    GotoEntTGNSubMenu: TMenuItem;
+    CollisionMenu: TMenuItem;
+    function TestRequarementExtensions(): Boolean;
+    procedure InitGL();
+    procedure GetVisleafRenderList();
+    procedure GetFaceRenderList();
+    procedure CollisionProcess();
     procedure do_movement(const Offset: GLfloat);
-    procedure GetMouseClickRay(const X, Y: Integer);
     procedure GetFaceIndexByRay();
+    procedure UpdateFaceVisualInfo();
+    procedure ClearFaceVisualInfo();
+    procedure GenerateLightmapMegatexture();
+    procedure GenerateBasetextures();
+    procedure UpdFaceDrawState();
+    procedure DrawScence(Sender: TObject);
     //
     procedure FormCreate(Sender: TObject);
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure FormPaint(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure FormMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure FormMouseMove(Sender: TObject; Shift: TShiftState; X,
-      Y: Integer);
-    procedure FormMouseUp(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
     procedure FormResize(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
@@ -100,73 +151,75 @@ type
     procedure ResetCameraMenuClick(Sender: TObject);
     procedure LoadMapMenuClick(Sender: TObject);
     procedure CloseMapMenuClick(Sender: TObject);
-    procedure ShowHeader1Click(Sender: TObject);
-    procedure ShowWorldBrushesMenuClick(Sender: TObject);
-    procedure ShowEntBrushesMenuClick(Sender: TObject);
-    procedure WireframeWorldBrushesMenuClick(Sender: TObject);
+    procedure ShowHeaderMenuClick(Sender: TObject);
     procedure WireframeEntBrushesMenuClick(Sender: TObject);
-    procedure WallhackRenderModeMenuClick(Sender: TObject);
-    procedure FormClick(Sender: TObject);
     procedure SaveMapMenuClick(Sender: TObject);
-    procedure PixelModeMenuClick(Sender: TObject);
-    procedure FormShow(Sender: TObject);
-    procedure FormHide(Sender: TObject);
-    procedure SetSelectedFaceColor1Click(Sender: TObject);
-    procedure SaveallLightmapsMenuClick(Sender: TObject);
-    procedure LoadallLightmapsMenuClick(Sender: TObject);
-    procedure NoPVSMenuClick(Sender: TObject);
-    procedure RenderBBOXVisLeaf1Click(Sender: TObject);
-    procedure ToolFaceMenuClick(Sender: TObject);
+    procedure SetSelectedFaceColorMenuClick(Sender: TObject);
+    procedure RenderBBOXVisLeafClick(Sender: TObject);
+    procedure OcclusionMenuClick(Sender: TObject);
+    procedure PanelRTResize(Sender: TObject);
+    procedure PanelRTMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure PanelRTMouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
+    procedure PanelRTMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure ButtonSaveLmpClick(Sender: TObject);
+    procedure ButtonLoadLmpClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure LmpPixelModeMenuClick(Sender: TObject);
+    procedure SetWireframeFaceColorMenuClick(Sender: TObject);
+    procedure WireframeHighlighEntBrushesMenuClick(Sender: TObject);
+    procedure CloseMenuClick(Sender: TObject);
+    procedure DisableLightmapsMenuClick(Sender: TObject);
+    procedure DisableTexturesMenuClick(Sender: TObject);
+    procedure ShowOpenGLInformationMenuClick(Sender: TObject);
+    procedure GotoCamPosSubMenuClick(Sender: TObject);
+    procedure GotoFaceIdSubmenuClick(Sender: TObject);
+    procedure GotoVisLeafIdSubMenuClick(Sender: TObject);
+    procedure GotoBModelIdSubMenuClick(Sender: TObject);
+    procedure GotoEntTGNSubMenuClick(Sender: TObject);
+    procedure CollisionMenuClick(Sender: TObject);
   private
-    { Private declarations }
-  public
-    HRC: HGLRC; // OpenGL
-    VSyncManager: CVSyncManager;
+    RenderContext: CRenderingContextManager;
+    RenderTimer: CRenderTimerManager;
     Camera: CFirtsPersonViewCamera;
-    FrustumVertecies: array[0..7] of tVec3d;
-    FrustumPlanes: array[0..5] of tPlane;
-    FrustumDot: GLfloat;
-    FieldOfView: GLdouble;
-    //
-    RayTracer: CRayTracer;
-    MouseRay: tRay;
-    isLeftMouseClicked, isRightMouseClicked: Boolean;
-    mdx, mdy: Integer; // Mouse offsets
-    //
-    tickCount: Integer; // Counter for wait output info
-    PressedKeys: array[0..1023] of Boolean;
-    //
-    isCanRender: Boolean;
-    StartOrts: GLuint;
-    //***
-    Bsp30: tMapBSP;
-    isBspLoad: Boolean;
-    //
-    CameraLeafId, CameraLastLeafId: Integer;
-    FirstSpawnEntityId: Integer;
-    lpCameraLeaf: PVisLeafInfo;
-    //
-    FacesIndexToRender: AByteBool;
-    BrushIndexToRender: AByteBool;
-    LeafIndexToRender: AByteBool;
-    // Render VisLeaf options
-    BaseCubeLeafWireframeList: GLuint;
-    SecondCubeLeafWireframeList: GLuint;
-    // Lightmap Face options
-    RenderFaceInfo: tRenderFaceInfo;
-    SelectedFaceIndex: Integer;
+    WorkArea: TRect;
+    RenderRange: GLfloat;
     FaceSelectedColor: tColor4fv;
+    FaceWireframeColor: tColor4fv;
+    FaceDrawState: Integer;
+    //
+    MouseRay: tRay;
+    MousePos, MouseLastPos: TPoint;
+    isLeftMouseClicked, isRightMouseClicked: Boolean;
+    PressedKeyW: ByteBool;
+    PressedKeyS: ByteBool;
+    PressedKeyA: ByteBool;
+    PressedKeyD: ByteBool;
+    PressedKeyShift: ByteBool;
+    //
+    procedure Idle(Sender: TObject; var Done: Boolean);
+  public
+
   end;
 
 const
-  MaxRender: GLdouble = 4000.0;
-  ClearColor: tColor4fv = (0.94, 0.94, 0.97, 1.0);
+  DefaultRenderRange: GLfloat = 10000.0;
+  FieldOfView: GLfloat = 90.0;
+  MouseFreq: GLfloat = (Pi/180.0)/4.0; // [radian per pixel]
+  CameraSpeed: GLfloat = 256;
+  CameraSpeedAcc: GLfloat = 4.0*256;
+  RenderInfoDelayUpd: GLfloat = 0.25; // seconds
+  //
+  ClearColor: tColor4fv = (0.01, 0.01, 0.01, 0.0);
   LeafRenderColor: tColor4fv = (0.1, 0.1, 0.7, 1.0);
   LeafRenderSecondColor: tColor4fv = (0.1, 0.7, 0.1, 0.1);
-  MAX_TICKCOUNT: Integer = 10;
   //
-  MouseFreq: GLfloat = (Pi/180.0)/4.0; // [radian per pixel]
-  CameraSpeed: GLfloat = 0.2;
+  FACEDRAW_ALL                = $00;
+  FACEDRAW_LIGHTMAP_ONLY      = $01;
+  FACEDRAW_BASETEXTURE_ONLY   = $02;
+  FACEDRAW_DISABLE = FACEDRAW_ALL or FACEDRAW_LIGHTMAP_ONLY or FACEDRAW_BASETEXTURE_ONLY;
   //
   HelpStr: String = 'Rotate Camera: Left Mouse Button' + LF +
     'Move Camera forward/backward: keys W/S' + LF +
@@ -178,686 +231,975 @@ const
   AboutStr: String = 'Copyright (c) 2020 Sergey Smolovsky, Belarus' + LF +
     'email: sergeysmol4444@mail.ru' + LF +
     'GoldSrc BSP Editor' + LF +
-    'Program version: 1.0.3' + LF +
+    'Program version: 1.2.0' + LF +
     'Version of you OpenGL: ';
   MainFormCaption: String = 'GoldSrc BSP Editor';
+
+
+var
+  LastError: GLenum;
+  RenderFrameIterator: Byte = 0; // use for mark leaf/faces to render
+  CameraLeafId: Integer = 0;
+  CameraLastLeafId: Integer = 0;
+  FirstSpawnEntityId: Integer = -1;
+  lpCameraLeaf: PVisLeafExt = nil;
+  //
+  // Collision status
+  CurrCollisionDepth: Integer;
+  CurrCollisionFlag: Integer;
+  CurrSlidePlaneId: Integer;
+  CollisionInfo: tCollisionInfo;
+  //
+  // Render VisLeaf options
+  BaseCubeLeafWireframeList: GLuint = 0;
+  SecondCubeLeafWireframeList: GLuint = 0;
+  StartOrts: GLuint = 0;
+  // Lightmap Face options
+  SelectedFaceIndex: Integer = -1;
+  SelectedStyle: Integer = 0;
+  CurrFaceExt: PFaceExt = nil;
+  //
+  LightmapMegatexture: CMegatextureManager;
+  BasetextureMng: CBasetextureManager;
+  BaseThumbnailBMP: TBitmap;
+  //
+  FacesIndexToRender: Array[0..65535] of Byte;
+  LeafIndexToRender: Array[0..65535] of Byte;
+  BrushIndexToRender: Array[0..65535] of Byte;
+  //
+  isBspLoad: Boolean = False;
+  Map: tMapBSP;
 
 
 implementation
 
 {$R *.dfm}
 
-uses Unit2;
-
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   {$R-}
   Self.Caption:=MainFormCaption;
-  Self.tickCount:=MAX_TICKCOUNT;
-  Self.FieldOfView:=90.0; // Camera FOV
   Self.KeyPreview:=True;
   Self.isLeftMouseClicked:=False;
   Self.isRightMouseClicked:=False;
+  Self.RenderRange:=DefaultRenderRange;
+  Self.OpenDialogBsp.InitialDir:=GetCurrentDir;
+  Self.OpenDialogBMP.InitialDir:=GetCurrentDir;
+  Self.SaveDialogBsp.InitialDir:=GetCurrentDir;
+  Self.SaveDialogBMP.InitialDir:=GetCurrentDir;
   //
-  Self.isBspLoad:=False;
-  Self.isCanRender:=True;
-  Self.CameraLeafId:=0;
-  Self.CameraLastLeafId:=0;
-  Self.FirstSpawnEntityId:=0;
-  Self.lpCameraLeaf:=nil;
-  Self.SelectedFaceIndex:=-1;
+  Self.PressedKeyW:=False;
+  Self.PressedKeyS:=False;
+  Self.PressedKeyA:=False;
+  Self.PressedKeyD:=False;
+  Self.PressedKeyShift:=False;
+  Self.UpdFaceDrawState();
   //
-  Self.RenderFaceInfo.lpFaceInfo:=nil;
-  Self.RenderFaceInfo.Page:=0;
-  Self.RenderFaceInfo.FilterMode:=GL_LINEAR;
+  Self.ClearFaceVisualInfo();
+  //
+  Self.FaceSelectedColor[0]:=1.0;
+  Self.FaceSelectedColor[1]:=0.1;
+  Self.FaceSelectedColor[2]:=0.1;
+  Self.FaceSelectedColor[3]:=0.3;
+  //
+  Self.FaceWireframeColor[0]:=1.0;
+  Self.FaceWireframeColor[1]:=0.0;
+  Self.FaceWireframeColor[2]:=0.0;
+  Self.FaceWireframeColor[3]:=1.0;
 
-  Self.VSyncManager:=CVSyncManager.CreateVSyncManager(MinSyncInterval);
-  Self.RayTracer:=CRayTracer.CreateRayTracer();
+  Self.DoubleBuffered:=True;
+  Self.PanelRT.DoubleBuffered:=True;
+  Self.PanelRT.HandleNeeded();
+  Self.RenderContext:=CRenderingContextManager.CreateManager();
+  if (Self.RenderContext.CreateRenderingContext(Self.PanelRT.Handle, 24) = False) then
+    begin
+      ShowMessage('Error create OpenGL context!');
+      Self.RenderContext.DeleteRenderingContext();
+      Self.RenderContext.DeleteManager();
+      Application.ShowMainForm:=False;
+      Application.Terminate;
+    end;
+  Self.RenderContext.MakeCurrent();
+
+  Self.WorkArea.Left:=Self.Left;
+  Self.WorkArea.Top:=Self.Top;
+  Self.WorkArea.Right:=Self.Width + Self.Left;
+  Self.WorkArea.Bottom:=Self.Height + Self.Top;
+  if (SystemParametersInfo(SPI_GETWORKAREA, 0, @Self.WorkArea, 0)) then
+    begin
+      Self.Left:=Self.WorkArea.Left;
+      Self.Top:=Self.WorkArea.Top;
+      Self.Width:=Self.WorkArea.Right - Self.Left;
+      Self.Height:=Self.WorkArea.Bottom - Self.Top;
+    end; //}
+
+  // Setup OpenGL Extensions. Only after wglCreateContext work wglGetProcAddress
+  LoadOpenGLExtensions();
+  if (TestOpenGLVersion(1, 3)) then
+    begin
+      ShowMessage('Error: Current system OpenGL version: '
+        + OpenGLVersionShort + '; Requarement minimum version: 1.3');
+      Application.ShowMainForm:=False;
+      Application.Terminate();
+    end;
+  if (Self.TestRequarementExtensions() = False) then
+    begin
+      Application.ShowMainForm:=False;
+      Application.Terminate();
+    end;
+  Self.InitGL();
+  glPolygonOffset(0.0, -1.0); // for draw decals and selection mode
+  glClearColor(ClearColor[0], ClearColor[1], ClearColor[2], ClearColor[3]);
+
+  BaseCubeLeafWireframeList:=GenListCubeWireframe(@LeafRenderColor[0]);
+  SecondCubeLeafWireframeList:=GenListCubeWireframe(@LeafRenderSecondColor[0]);
+  StartOrts:=GenListOrts();
+
   Self.Camera:=CFirtsPersonViewCamera.CreateNewCamera(
     DefaultCameraPos,
     DefaultCameraPolarAngle,
     DefaultCameraAzimutalAngle
   );
+  BasetextureMng:=CBasetextureManager.CreateManager();
+  LightmapMegatexture:=CMegatextureManager.CreateManager();
+  //
+  BaseThumbnailBMP:=TBitmap.Create();
+  BaseThumbnailBMP.PixelFormat:=pf24bit;
+  BaseThumbnailBMP.Width:=BASETEXTURE_PREVIEW_SIZE;
+  BaseThumbnailBMP.Height:=BASETEXTURE_PREVIEW_SIZE;
+  BaseThumbnailBMP.Canvas.Brush.Color:=clBlack;
+  BaseThumbnailBMP.Canvas.Pen.Color:=clBlack;
 
-  SetDCPixelFormat(Self.Canvas.Handle);
-  Self.HRC:=wglCreateContext(Self.Canvas.Handle);
-  wglMakeCurrent(Self.Canvas.Handle, Self.HRC);
-
-  InitGL();
-  glClearColor(ClearColor[0], ClearColor[1], ClearColor[2], ClearColor[3]);
-  Self.BaseCubeLeafWireframeList:=GenListCubeWireframe(@LeafRenderColor[0]);
-  SecondCubeLeafWireframeList:=GenListCubeWireframe(@LeafRenderSecondColor[0]);
-  Self.StartOrts:=GenListOrts();
-
-  Self.FaceSelectedColor[0]:=1.0;
-  Self.FaceSelectedColor[1]:=0.1;
-  Self.FaceSelectedColor[2]:=0.1;
-  Self.FaceSelectedColor[3]:=0.3;
-
-  Self.UpdateOpenGLViewport(MaxRender);
+  Self.PanelRTResize(Sender);
+  Self.RenderTimer:=CRenderTimerManager.CreateManager();
+  Application.OnIdle:=Self.Idle;
   {$R+}
 end;
 
-procedure TMainForm.UpdateOpenGLViewport(const zFar: GLdouble);
+function TMainForm.TestRequarementExtensions(): Boolean;
 begin
   {$R-}
-  glViewport(0, 0, Self.ClientWidth, Self.ClientHeight);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity;
-  gluPerspective(FieldOfView, Self.ClientWidth/Self.ClientHeight, 1, zFar);
+  // OpenGL 1.2
+  if (IsExistExtension(GL_EXT_blend_minmax_str) = False) then
+    begin
+      ShowMessage(GL_EXT_blend_minmax_str + ' is not supported!');
+      Result:=False;
+      Exit;
+    end; //}
+
+  if (IsExistExtension(GL_EXT_blend_subtract_str) = False) then
+    begin
+      ShowMessage(GL_EXT_blend_subtract_str + ' is not supported!');
+      Result:=False;
+      Exit;
+    end; //}
+
+  if (IsExistExtension(GL_EXT_blend_color_str) = False) then
+    begin
+      ShowMessage(GL_EXT_blend_color_str + ' is not supported!');
+      Result:=False;
+      Exit;
+    end; //}
+
+  if (IsExistExtension(GL_EXT_bgra_str) = False) then
+    begin
+      ShowMessage(GL_EXT_bgra_str + ' is not supported!');
+      Result:=False;
+      Exit;
+    end; //}
+
+  if (IsExistExtension(GL_EXT_texture_edge_clamp_str) = False) then
+    begin
+      ShowMessage(GL_EXT_texture_edge_clamp_str + ' is not supported!');
+      Result:=False;
+      Exit;
+    end; //}
+
+  // OpenGL 1.3
+  if (IsExistExtension(GL_ARB_texture_env_add_str) = False) then
+    begin
+      ShowMessage(GL_ARB_texture_env_add_str + ' is not supported!');
+      Result:=False;
+      Exit;
+    end; //}
+
+  if (IsExistExtension(GL_ARB_texture_env_combine_str) = False) then
+    begin
+      ShowMessage(GL_ARB_texture_env_combine_str + ' is not supported!');
+      Result:=False;
+      Exit;
+    end; //}
+
+  if (IsExistExtension(GL_ARB_multitexture_str) = False) then
+    begin
+      ShowMessage(GL_ARB_multitexture_str + ' is not supported!');
+      Result:=False;
+      Exit;
+    end; //}
+
+  Result:=True;
   {$R+}
 end;
 
-procedure TMainForm.GetFrustum();
-var
-  Dot1, Dot2: Single;
+procedure TMainForm.InitGL();
 begin
   {$R-}
-  // Get Frustum Vertecies
-  Self.RayTracer.UnProjectVertex(0, 0, 0, @FrustumVertecies[0]);
-  Self.RayTracer.UnProjectVertex(0, Self.ClientHeight, 0, @FrustumVertecies[1]);
-  Self.RayTracer.UnProjectVertex(Self.ClientWidth, Self.ClientHeight, 0, @FrustumVertecies[2]);
-  Self.RayTracer.UnProjectVertex(Self.ClientWidth, 0, 0, @FrustumVertecies[3]);
+  glEnable(GL_TEXTURE_2D);  // Enable 2D Textures
+  glEnable(GL_TEXTURE_3D);  // Enable 2D Textures
+  glEnable(GL_DEPTH_TEST);  // Enable Depth Buffer
+  glEnable(GL_CULL_FACE); // Enable Face Normal Test
+  glCullFace(GL_FRONT); // which Face side render, Front or Back
+  glPolygonMode(GL_BACK, GL_FILL); // GL_FILL, GL_LINE, GL_POINT
+
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Support load textures per byte
+  glPixelStorei(GL_PACK_ALIGNMENT, 1); // Support save textures per byte
+
+  glDepthMask ( GL_TRUE ); // Enable Depth Test
+  glDepthFunc(GL_LEQUAL);  // type of Depth Test
+  glEnable(GL_NORMALIZE); // automatic Normalize
+
+  glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+  glEnable(GL_COLOR_MATERIAL);
+
+  glShadeModel(GL_SMOOTH); // Interpolation color type
+  // GL_FLAT - Color dont interpolated, GL_SMOOTH - linear interpolate
+
+  glAlphaFunc(GL_GEQUAL, 0.1);
+  glEnable(GL_ALPHA_TEST);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
   
-  Self.RayTracer.UnProjectVertex(0, 0, 1, @FrustumVertecies[4]);
-  Self.RayTracer.UnProjectVertex(0, Self.ClientHeight, 1, @FrustumVertecies[5]);
-  Self.RayTracer.UnProjectVertex(Self.ClientWidth, Self.ClientHeight, 1, @FrustumVertecies[6]);
-  Self.RayTracer.UnProjectVertex(Self.ClientWidth, 0, 1, @FrustumVertecies[7]);
-
-  // Get Frustum Planes
-  // 1. Near Plane
-  Self.FrustumPlanes[0].vNormal:=Self.Camera.ViewDirection;
-  Self.FrustumPlanes[0].fDist:=Self.Camera.DistToAxis;
-  Self.FrustumPlanes[0].AxisType:=PLANE_ANY_Z;
-  // 2. Far Plane
-  SignInvertVec3f(@Self.FrustumPlanes[0].vNormal, @Self.FrustumPlanes[1].vNormal);
-  Self.FrustumPlanes[1].fDist:=-(MaxRender + Self.FrustumPlanes[0].fDist);
-  Self.FrustumPlanes[1].AxisType:=PLANE_ANY_Z;
-
-  // 3. Left Plane
-  GetPlaneByPoints(FrustumVertecies[0],
-    FrustumVertecies[3],
-    FrustumVertecies[4],
-    @Self.FrustumPlanes[2]);
-  // 4. Right Plane
-  GetPlaneByPoints(FrustumVertecies[2],
-    FrustumVertecies[1],
-    FrustumVertecies[6],
-    @Self.FrustumPlanes[3]);
-
-  // 5. Top Plane
-  GetPlaneByPoints(FrustumVertecies[0],
-    FrustumVertecies[4],
-    FrustumVertecies[1],
-    @Self.FrustumPlanes[4]);
-  // 6. Bottom Plane
-  GetPlaneByPoints(FrustumVertecies[2],
-    FrustumVertecies[6],
-    FrustumVertecies[3],
-    @Self.FrustumPlanes[5]);
-
-  Dot1:=Self.FrustumPlanes[0].vNormal.x*Self.FrustumPlanes[2].vNormal.x +
-    Self.FrustumPlanes[0].vNormal.y*Self.FrustumPlanes[2].vNormal.y +
-    Self.FrustumPlanes[0].vNormal.z*Self.FrustumPlanes[2].vNormal.z;
-  Dot2:=Self.FrustumPlanes[0].vNormal.x*Self.FrustumPlanes[4].vNormal.x +
-    Self.FrustumPlanes[0].vNormal.y*Self.FrustumPlanes[4].vNormal.y +
-    Self.FrustumPlanes[0].vNormal.z*Self.FrustumPlanes[4].vNormal.z;
-  if (Dot1 > Dot2) then Self.FrustumDot:=Dot1 else Self.FrustumDot:=Dot2;
+  // point border smooth
+  glEnable(GL_POINT_SMOOTH);
+  glHint(GL_POINT_SMOOTH_HINT, GL_NICEST); //GL_FASTEST/GL_NICEST
+  // line border smooth
+  glEnable(GL_LINE_SMOOTH);
+  glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+  // polygon border smooth
+  //glEnable(GL_POLYGON_SMOOTH);
+  glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+  //
+  glHint(GL_Perspective_Correction_Hint, GL_NICEST); //}
   {$R+}
 end;
 
-function TMainForm.isNotFaceFrustumIntersection(const lpFaceInfo: PFaceInfo): Boolean;
-var
-  i, j: Integer;
-  tmpBool: Boolean;
+procedure TMainForm.GetVisleafRenderList();
 begin
   {$R-}
-  for i:=0 to 5 do
+  if (isBspLoad) then
     begin
-      tmpBool:=True;
-      for j:=0 to (lpFaceInfo.CountVertex - 1) do
+      CameraLeafId:=GetLeafIndexByPoint(
+        @Map.NodeExtList[0],
+        Self.Camera.ViewPosition,
+        Map.RootNodeIndex
+      );
+
+      if (CameraLeafId <> CameraLastLeafId) then
         begin
-          if (isPointInFrontPlaneSpaceFull(@Self.FrustumPlanes[i],
-            lpFaceInfo.Vertex[j])) then
+          lpCameraLeaf:=@Map.VisLeafExtList[CameraLeafId];
+          Self.LabelCameraLeafId.Caption:='Camera in Leaf: ' + IntToStr(CameraLeafId);
+
+          Inc(RenderFrameIterator);
+          if (RenderFrameIterator = 255) then
             begin
-              tmpBool:=False;
-              Break;
+              RenderFrameIterator:=0;
+              FillChar255(@FacesIndexToRender[0], Map.CountFaces);
+              FillChar255(@BrushIndexToRender[0], Map.CountBrushModels);
+            end;
+
+          if (CameraLeafId > 0) then
+            begin
+              // Update visibility flags of VisLeafs
+              SetBytesByBoolMask(
+                @lpCameraLeaf.PVS[0],
+                @LeafIndexToRender[0],
+                lpCameraLeaf.CountPVS,
+                RenderFrameIterator or ((not RenderFrameIterator) shl 8)
+              );
+            end
+          else
+            begin
+              if (Self.OcclusionMenu.Checked = False) then
+                begin
+                  FillChar(FacesIndexToRender[0], Map.CountFaces, RenderFrameIterator);
+                  FillChar(BrushIndexToRender[0], Map.CountBrushModels, RenderFrameIterator);
+                end;
             end; //}
-        end;
 
-      if (tmpBool = True) then
-        begin
-          Result:=True;
-          Exit;
+          CameraLastLeafId:=CameraLeafId;
         end;
+      Self.GetFaceRenderList();
     end;
-    
-  Result:=False;
   {$R+}
 end;
 
-function TMainForm.isNotFrustumBBoxIntersection(const BBOXf: tBBOXf): Boolean;
-label
-  LabelBackX, LabelRightY, LabelLeftY, LabelUpZ, LabelDownZ, LabelFalseRet;
-begin
-  {$R-}
-  // Front X, Normal = (1, 0, 0);
-  if (Self.FrustumVertecies[0].x >= BBOXf.vMin.x) then goto LabelBackX;
-  if (Self.FrustumVertecies[1].x >= BBOXf.vMin.x) then goto LabelBackX;
-  if (Self.FrustumVertecies[2].x >= BBOXf.vMin.x) then goto LabelBackX;
-  if (Self.FrustumVertecies[3].x >= BBOXf.vMin.x) then goto LabelBackX;
-  if (Self.FrustumVertecies[4].x >= BBOXf.vMin.x) then goto LabelBackX;
-  if (Self.FrustumVertecies[5].x >= BBOXf.vMin.x) then goto LabelBackX;
-  if (Self.FrustumVertecies[6].x >= BBOXf.vMin.x) then goto LabelBackX;
-  if (Self.FrustumVertecies[7].x < BBOXf.vMin.x) then
-    begin
-      Result:=True;
-      Exit;
-    end;
-
-  // Back X, Normal = (-1, 0, 0):
-LabelBackX:
-  if (Self.FrustumVertecies[0].x <= BBOXf.vMax.x) then goto LabelRightY;
-  if (Self.FrustumVertecies[1].x <= BBOXf.vMax.x) then goto LabelRightY;
-  if (Self.FrustumVertecies[2].x <= BBOXf.vMax.x) then goto LabelRightY;
-  if (Self.FrustumVertecies[3].x <= BBOXf.vMax.x) then goto LabelRightY;
-  if (Self.FrustumVertecies[4].x <= BBOXf.vMax.x) then goto LabelRightY;
-  if (Self.FrustumVertecies[5].x <= BBOXf.vMax.x) then goto LabelRightY;
-  if (Self.FrustumVertecies[6].x <= BBOXf.vMax.x) then goto LabelRightY;
-  if (Self.FrustumVertecies[7].x > BBOXf.vMax.x) then
-    begin
-      Result:=True;
-      Exit;
-    end;
-
-  // Right Y, Normal = (0, 1, 0):
-LabelRightY:
-  if (Self.FrustumVertecies[0].y >= BBOXf.vMin.y) then goto LabelLeftY;
-  if (Self.FrustumVertecies[1].y >= BBOXf.vMin.y) then goto LabelLeftY;
-  if (Self.FrustumVertecies[2].y >= BBOXf.vMin.y) then goto LabelLeftY;
-  if (Self.FrustumVertecies[3].y >= BBOXf.vMin.y) then goto LabelLeftY;
-  if (Self.FrustumVertecies[4].y >= BBOXf.vMin.y) then goto LabelLeftY;
-  if (Self.FrustumVertecies[5].y >= BBOXf.vMin.y) then goto LabelLeftY;
-  if (Self.FrustumVertecies[6].y >= BBOXf.vMin.y) then goto LabelLeftY;
-  if (Self.FrustumVertecies[7].y < BBOXf.vMin.y) then
-    begin
-      Result:=True;
-      Exit;
-    end;
-
-  // Left Y, Normal = (0, -1, 0):
-LabelLeftY:
-  if (Self.FrustumVertecies[0].y <= BBOXf.vMax.y) then goto LabelDownZ;
-  if (Self.FrustumVertecies[1].y <= BBOXf.vMax.y) then goto LabelDownZ;
-  if (Self.FrustumVertecies[2].y <= BBOXf.vMax.y) then goto LabelDownZ;
-  if (Self.FrustumVertecies[3].y <= BBOXf.vMax.y) then goto LabelDownZ;
-  if (Self.FrustumVertecies[4].y <= BBOXf.vMax.y) then goto LabelDownZ;
-  if (Self.FrustumVertecies[5].y <= BBOXf.vMax.y) then goto LabelDownZ;
-  if (Self.FrustumVertecies[6].y <= BBOXf.vMax.y) then goto LabelDownZ;
-  if (Self.FrustumVertecies[7].y > BBOXf.vMax.y) then
-    begin
-      Result:=True;
-      Exit;
-    end;
-
-  // Down Z, Normal = (0, 0, 1):
-LabelDownZ:
-  if (Self.FrustumVertecies[0].z >= BBOXf.vMin.z) then goto LabelUpZ;
-  if (Self.FrustumVertecies[1].z >= BBOXf.vMin.z) then goto LabelUpZ;
-  if (Self.FrustumVertecies[2].z >= BBOXf.vMin.z) then goto LabelUpZ;
-  if (Self.FrustumVertecies[3].z >= BBOXf.vMin.z) then goto LabelUpZ;
-  if (Self.FrustumVertecies[4].z >= BBOXf.vMin.z) then goto LabelUpZ;
-  if (Self.FrustumVertecies[5].z >= BBOXf.vMin.z) then goto LabelUpZ;
-  if (Self.FrustumVertecies[6].z >= BBOXf.vMin.z) then goto LabelUpZ;
-  if (Self.FrustumVertecies[7].z < BBOXf.vMin.z) then
-    begin
-      Result:=True;
-      Exit;
-    end;
-
-  // Up Z, Normal = (0, 0, -1):
-LabelUpZ:
-  if (Self.FrustumVertecies[0].z <= BBOXf.vMax.z) then goto LabelFalseRet;
-  if (Self.FrustumVertecies[1].z <= BBOXf.vMax.z) then goto LabelFalseRet;
-  if (Self.FrustumVertecies[2].z <= BBOXf.vMax.z) then goto LabelFalseRet;
-  if (Self.FrustumVertecies[3].z <= BBOXf.vMax.z) then goto LabelFalseRet;
-  if (Self.FrustumVertecies[4].z <= BBOXf.vMax.z) then goto LabelFalseRet;
-  if (Self.FrustumVertecies[5].z <= BBOXf.vMax.z) then goto LabelFalseRet;
-  if (Self.FrustumVertecies[6].z <= BBOXf.vMax.z) then goto LabelFalseRet;
-  if (Self.FrustumVertecies[7].z > BBOXf.vMax.z) then
-    begin
-      Result:=True;
-      Exit;
-    end;
-
-LabelFalseRet:
-  Result:=False;
-  Exit;
-  {$R+}
-end;
-
-procedure TMainForm.GetRenderList();
+procedure TMainForm.GetFaceRenderList();
 var
   i, j, k: Integer;
-  tmpVisLeaf: PVisLeafInfo;
-  //tmp: Single;
+  tmpVisLeaf: PVisLeafExt;
+  tmpBrushModelExt: PBrushModelExt;
 begin
   {$R-}
-  ZeroFillChar(@Self.FacesIndexToRender[0], Self.Bsp30.CountFaces);
-  ZeroFillChar(@Self.BrushIndexToRender[0], Self.Bsp30.CountFaces);
-  if (Self.CameraLeafId <= 0) then Exit;
+  if (Self.OcclusionMenu.Checked) then
+    begin
+      if (TestPointInBBOX(Map.MapBBOX, Self.Camera.ViewPosition)) then
+        begin
+          BrushIndexToRender[0]:=RenderFrameIterator;
+        end;
+    end
+  else
+    begin
+      BrushIndexToRender[0]:=RenderFrameIterator;
+    end;
 
-  for i:=0 to (Self.lpCameraLeaf.CountPVS - 1) do
+  for i:=0 to (lpCameraLeaf.CountPVS - 1) do
     begin
       // For each VisLeaf on Map
-      if (Self.LeafIndexToRender[i] = False) then Continue;
+      tmpVisLeaf:=@Map.VisLeafExtList[i + 1];
 
-      // For each visible VisLeaf for lpCameraLeaf by PVS Table
-      tmpVisLeaf:=@Self.Bsp30.VisLeafInfos[i + 1];
-
-      // First test if VisLeaf touch Frustum
-      if (isNotFrustumBBoxIntersection(tmpVisLeaf.BBOXf)) then Continue;
-
-      // 1. Get visible worldbrush faces for tmpVisLeaf
-      if (Self.ShowWorldBrushesMenu.Checked) then
+      if (Self.OcclusionMenu.Checked) then
         begin
-          for j:=0 to (tmpVisLeaf.CountFaces - 1) do
-            begin
-              // test if Face Polygon intersect six Frustum Polygons
-              k:=tmpVisLeaf.FaceIndexes[j];
-              if (Self.isNotFaceFrustumIntersection(@Self.Bsp30.FaceInfos[k]) = False) then
-                begin
-                  {tmp:=Self.Bsp30.FaceInfos[k].Plane.vNormal.x*Self.FrustumPlanes[0].vNormal.x +
-                    Self.Bsp30.FaceInfos[k].Plane.vNormal.y*Self.FrustumPlanes[0].vNormal.y +
-                    Self.Bsp30.FaceInfos[k].Plane.vNormal.z*Self.FrustumPlanes[0].vNormal.z;
+          // For each visible VisLeaf for lpCameraLeaf by PVS Table
+          if (LeafIndexToRender[i] <> RenderFrameIterator) then Continue;
+        end;  
 
-                  if (tmp <= FrustumDot) then  //}
-                    Self.FacesIndexToRender[k]:=True;
-                end;
-            end;
+      // 1. Get visible World Brush faces for tmpVisLeaf
+      for j:=0 to (tmpVisLeaf.BaseLeaf.nMarkSurfaces - 1) do
+        begin
+          FacesIndexToRender[tmpVisLeaf.WFaceIndexes[j]]:=RenderFrameIterator;
         end;
 
-      // 2. Get visible EntBrushes
-      if (Self.ShowEntBrushesMenu.Checked) then
+      // 2. Get visible Entity Brushes faces
+      for j:=1 to (Map.CountBrushModels - 1) do
         begin
-          for j:=0 to (tmpVisLeaf.CountBrushFace - 1) do
+          tmpBrushModelExt:=@Map.BrushModelExtList[j];
+          if (TestIntersectionTwoBBOXOffset(tmpBrushModelExt.BaseBModel.BBOXf,
+            tmpVisLeaf.BBOXf, tmpBrushModelExt.Origin) = False) then Continue;  //}
+
+          BrushIndexToRender[j]:=RenderFrameIterator;
+          for k:=tmpBrushModelExt.BaseBModel.iFirstFace to tmpBrushModelExt.iLastFace do
             begin
-              k:=tmpVisLeaf.BrushFaceIndexes[j];
-
-              // Entity Brush can cover more than one VisLeaf
-              if (Self.BrushIndexToRender[k]) then Continue;
-
-              // test if Face Polygon intersect six Frustum Polygons
-              if (Self.isNotFaceFrustumIntersection(@Self.Bsp30.FaceInfos[k]) = False) then
-                begin
-                  {tmp:=Self.Bsp30.FaceInfos[k].Plane.vNormal.x*Self.FrustumPlanes[0].vNormal.x +
-                    Self.Bsp30.FaceInfos[k].Plane.vNormal.y*Self.FrustumPlanes[0].vNormal.y +
-                    Self.Bsp30.FaceInfos[k].Plane.vNormal.z*Self.FrustumPlanes[0].vNormal.z;
-
-                  if (tmp <= FrustumDot) then  //}
-                    Self.BrushIndexToRender[k]:=True;
-                end;
-            end;
+              FacesIndexToRender[k]:=RenderFrameIterator;
+            end; //}
         end;
     end; // End For each VisLeaf on Map
+  {$R+}
+end;
+
+procedure TMainForm.CollisionProcess();
+var
+  i: Integer;
+  tmpVec: tVec3f;
+  tmpStr: String;
+  CurrPlane: PPlaneBSP;
+begin
+  {$R-}
+  if ((isBSPLoad = False) or (Self.CollisionMenu.Checked = False)) then Exit;
+
+  for i:=0 to (Map.CountBrushModels - 1) do
+    begin
+      if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
+      
+      tmpVec.x:=Self.Camera.ViewPosition.x +
+        Map.BrushModelExtList[i].BaseBModel.Origin.x;
+      tmpVec.y:=Self.Camera.ViewPosition.y +
+        Map.BrushModelExtList[i].BaseBModel.Origin.y;
+      tmpVec.z:=Self.Camera.ViewPosition.z +
+        Map.BrushModelExtList[i].BaseBModel.Origin.z;
+
+      GetCollisionInfo(
+        @CollisionInfo,
+        @Map.ClipNodeExtList[Map.BrushModelExtList[i].BaseBModel.iHull[1]],
+        tmpVec,
+      );
+
+      if (CollisionInfo.State = CLIPCONTEST_SOLID) then Break;
+    end;
+
+  tmpStr:='List: ';
+  if (CollisionInfo.State = CLIPCONTEST_EMPTY) then tmpStr:='No, List: ';
+  if (CollisionInfo.State = CLIPCONTEST_SOLID) then tmpStr:='Yes, List: ';
+  for i:=0 to (CollisionInfo.Depth - 1) do
+    begin
+      CurrPlane:=@Map.ClipNodeExtList[CollisionInfo.iClipList[i]].Plane;
+      tmpStr:=tmpStr +  PlaneToStr(CurrPlane^) + '; ';
+    end;
+  Self.Caption:=tmpStr;
   {$R+}
 end;
 
 procedure TMainForm.do_movement(const Offset: GLfloat);
 begin
   {$R-}
-  if (Self.PressedKeys[OrdW]) then Self.Camera.StepForward(Offset);
-  if (Self.PressedKeys[OrdS]) then Self.Camera.StepBackward(Offset);
-  if (Self.PressedKeys[OrdA]) then Self.Camera.StepLeft(Offset);
-  if (Self.PressedKeys[OrdD]) then Self.Camera.StepRight(Offset);
-
-  if (Self.isBspLoad) then
-    begin
-      Self.CameraLeafId:=GetLeafIndexByPoint(Self.Bsp30.NodeInfos,
-        Self.Camera.ViewPosition, Self.Bsp30.RootIndex);
-
-      if (Self.CameraLeafId <> Self.CameraLastLeafId) then
-        begin
-          if (Self.CameraLeafId > 0) then
-            begin
-              Self.CameraLastLeafId:=Self.CameraLeafId;
-              Self.lpCameraLeaf:=@Self.Bsp30.VisLeafInfos[Self.CameraLeafId];
-            end
-          else Self.CameraLeafId:=CameraLastLeafId;
-
-          ZeroFillChar(@Self.LeafIndexToRender[0], Self.Bsp30.CountVisLeafWithPVS);
-          CopyBytes(
-            @Self.lpCameraLeaf.PVS[0],
-            @Self.LeafIndexToRender[0],
-            Self.lpCameraLeaf.CountPVS
-          );
-        end;
-
-      Self.GetFrustum();
-      Self.GetRenderList();
-    end;
-  {$R+}
-end;
-
-procedure TMainForm.GetMouseClickRay(const X, Y: Integer);
-var
-  tmpVertex3d: array[0..2] of GLdouble;
-begin
-  {$R-}
-  // Get Start Ray Position
-  Self.RayTracer.UnProjectVertex(X, Y, 0, @tmpVertex3d[0]);
-  Self.MouseRay.Start.x:=tmpVertex3d[0];
-  Self.MouseRay.Start.y:=tmpVertex3d[1];
-  Self.MouseRay.Start.z:=tmpVertex3d[2];
-
-  // Get End Ray Position and calculate Ray Dir
-  Self.RayTracer.UnProjectVertex(X, Y, 1, @tmpVertex3d[0]);
-  Self.MouseRay.Dir.x:=tmpVertex3d[0] - Self.MouseRay.Start.x;
-  Self.MouseRay.Dir.y:=tmpVertex3d[1] - Self.MouseRay.Start.y;
-  Self.MouseRay.Dir.z:=tmpVertex3d[2] - Self.MouseRay.Start.z;
-
-  // Normalize Ray Dir
-  NormalizeVec3f(@Self.MouseRay.Dir);
+  if (Self.PressedKeyW) then Self.Camera.StepForward(Offset);
+  if (Self.PressedKeyS) then Self.Camera.StepBackward(Offset);
+  if (Self.PressedKeyA) then Self.Camera.StepLeft(Offset);
+  if (Self.PressedKeyD) then Self.Camera.StepRight(Offset);
   {$R+}
 end;
 
 procedure TMainForm.GetFaceIndexByRay();
 var
   i: Integer;
-  Dist, tmpDist: GLfloat;
+  Dist: GLfloat;
+  uvt: tVec3f;
 begin
   {$R-}
-  Self.SelectedFaceIndex:=-1;
-  if (Self.isBspLoad = False) then Exit;
+  SelectedFaceIndex:=-1;
+  CurrFaceExt:=nil;
+  if (isBspLoad = False) then Exit;
 
-  Dist:=MaxRender + 1;
+  Dist:=Self.RenderRange + 1;
+  // Dist start at value > 0;
+  // if Dist = 0, face on zNear plane
+  // if Dist < 0, face behind zNear plane, ignore it
+  // so, we can use fast integer compare technique for positives Float-32 IEEE-754;
 
-  // WorldBrush Faces
-  if (Self.ShowWorldBrushesMenu.Checked) then
+
+  for i:=0 to (Map.CountFaces - 1) do
     begin
-      for i:=0 to (Self.Bsp30.CountFaces - 1) do
-        begin
-          if (Self.FacesIndexToRender[i] = False) then Continue;
-          if (Self.Bsp30.FaceInfos[i].CountLightStyles > 0) then
-            begin
-              if (Self.RenderFaceInfo.Page >= Self.Bsp30.FaceInfos[i].CountLightStyles) then Continue;
-            end;
+      if (FacesIndexToRender[i] <> RenderFrameIterator) then Continue;
 
-          if (GetRayFaceIntersection(@Self.Bsp30.FaceInfos[i],
-            Self.MouseRay, @tmpDist)) then
+      if (GetRayPolygonIntersection(@Map.FaceExtList[i].Polygon,
+        Self.MouseRay, @uvt) >= 0) then
+        begin
+          // Use fast integer compare technique for positives Float-32 IEEE-754;
+          if (PInteger(@uvt.z)^ < PInteger(@Dist)^) then
             begin
-              if (tmpDist < Dist) then
-                begin
-                  Dist:=tmpDist;
-                  Self.SelectedFaceIndex:=i;
-                end;
+              Dist:=uvt.z;
+              SelectedFaceIndex:=i;
             end;
         end;
     end;
 
-  // EntityBrush Faces
-  if (Self.ShowEntBrushesMenu.Checked) then
+  if (SelectedFaceIndex >= 0) then
     begin
-      for i:=0 to (Self.Bsp30.CountFaces - 1) do
-        begin
-          if (Self.BrushIndexToRender[i] = False) then Continue;
-          if (Self.Bsp30.FaceInfos[i].CountLightStyles > 0) then
-            begin
-              if (Self.RenderFaceInfo.Page >= Self.Bsp30.FaceInfos[i].CountLightStyles) then Continue;
-            end;
-
-          if (GetRayFaceIntersection(@Self.Bsp30.FaceInfos[i],
-            Self.MouseRay, @tmpDist)) then
-            begin
-              if (tmpDist < Dist) then
-                begin
-                  Dist:=tmpDist;
-                  Self.SelectedFaceIndex:=i;
-                end;
-            end;
-        end;
-    end;
-
-  if (Self.SelectedFaceIndex >= 0) then
-    begin
-      if (Assigned(Unit2.FaceToolForm)) then
-        begin
-          Unit2.FaceToolForm.FaceSelectedIndex:=Self.SelectedFaceIndex;
-          Unit2.FaceToolForm.CurrFace:=@Self.Bsp30.FaceLump[Self.SelectedFaceIndex];
-          Unit2.FaceToolForm.CurrFaceInfo:=@Self.Bsp30.FaceInfos[Self.SelectedFaceIndex];
-          Unit2.FaceToolForm.UpdateFaceVisualInfo();
-        end;
+      CurrFaceExt:=@Map.FaceExtList[SelectedFaceIndex];
+      Self.UpdateFaceVisualInfo();
     end
   else
     begin
-      if (Assigned(Unit2.FaceToolForm)) then
-        begin
-          Unit2.FaceToolForm.ClearFaceVisualInfo();
-        end;
+      Self.ClearFaceVisualInfo();
     end;
   {$R+}
 end;
 
+procedure TMainForm.GenerateLightmapMegatexture();
+var
+  i, iVisLeaf, iFace, iStyle, iBrushModel: Integer;
+  tmpSize: TPoint;
+  MegaMemError: eMegaMemError;
+  lpVisLeafExt: PVisLeafExt;
+  lpFaceExt: PFaceExt;
+  lpBrushModelExt: PBrushModelExt;
+  lpLightmapBase, lpLightmapAdd: PRGB888;
+begin
+  {$R-}
+  if (LightmapMegatexture.AllocNewMegaTexture(@MegaMemError) = False) then
+    begin
+      ShowMessage(GetMegaMemErrorInfo(MegaMemError));
+      LightmapMegatexture.Clear();
+      Exit;
+    end;
 
-procedure TMainForm.FormPaint(Sender: TObject);
+  // 1. Create dummy lightmap texture
+  LightmapMegatexture.ReserveTexture(MEGATEXTURE_DUMMY_SIZE);
+  LightmapMegatexture.UpdateCurrentBufferFromArray(
+    MEGATEXTURE_DUMMY_MEGAID,
+    MEGATEXTURE_DUMMY_REGIONID,
+    @MEGATEXTURE_DUMMY_DATA[0],
+    nil
+  );
+
+  // 2. Process Faces without lightmaps - create dummy white 2x2 lightmap
+  for iFace:=0 to (Map.CountFaces - 1) do
+    begin
+      lpFaceExt:=@Map.FaceExtList[iFace];
+      if (lpFaceExt.isDummyLightmaps) then
+        begin
+          lpFaceExt.LmpMegaId:=MEGATEXTURE_DUMMY_MEGAID;
+          lpFaceExt.LmpRegionId:=MEGATEXTURE_DUMMY_REGIONID;
+        end;
+  end;
+
+  // 3. Process World Face's with lightmaps
+  for iVisLeaf:=1 to Map.CountVisLeafWithPVS do
+    begin
+      lpVisLeafExt:=@Map.VisLeafExtList[iVisLeaf];
+      for i:=0 to (lpVisLeafExt.BaseLeaf.nMarkSurfaces - 1) do
+        begin
+          iFace:=lpVisLeafExt.WFaceIndexes[i];
+          lpFaceExt:=@Map.FaceExtList[iFace];
+
+          if (lpFaceExt.isDummyLightmaps) then Continue;
+
+          tmpSize.X:=lpFaceExt.LmpSize.X*lpFaceExt.CountLightStyles;
+          tmpSize.Y:=lpFaceExt.LmpSize.Y;
+          if (LightmapMegatexture.IsCanReserveTexture(tmpSize) = False) then
+            begin
+              LightmapMegatexture.UpdateTextureFromCurrentBuffer();
+              if (LightmapMegatexture.AllocNewMegaTexture(@MegaMemError) = False) then
+                begin
+                  ShowMessage(GetMegaMemErrorInfo(MegaMemError));
+                  LightmapMegatexture.Clear();
+                  Exit;
+                end;
+            end;
+
+          lpFaceExt.LmpMegaId:=LightmapMegatexture.CurrentMegatextureIndex;
+          lpFaceExt.LmpRegionId:=LightmapMegatexture.ReserveTexture(lpFaceExt.LmpSize);
+          LightmapMegatexture.UpdateCurrentBufferFromArray(
+            lpFaceExt.LmpMegaId,
+            lpFaceExt.LmpRegionId,
+            @lpFaceExt.Lightmaps[0],
+            nil
+          );
+          LightmapMegatexture.UpdateTextureCoords(
+            lpFaceExt.LmpMegaId,
+            lpFaceExt.LmpRegionId,
+            @lpFaceExt.LmpCoords[0],
+            @lpFaceExt.LmpMegaCoords[0],
+            lpFaceExt.Polygon.CountVertecies
+          );
+          for iStyle:=1 to (lpFaceExt.CountLightStyles - 1) do
+            begin
+              LightmapMegatexture.ReserveTexture(lpFaceExt.LmpSize);
+              lpLightmapBase:=@lpFaceExt.Lightmaps[0];
+              lpLightmapAdd:=lpLightmapBase;
+              Inc(lpLightmapAdd, iStyle*lpFaceExt.LmpSquare);
+              LightmapMegatexture.UpdateCurrentBufferFromArray(
+                lpFaceExt.LmpMegaId,
+                lpFaceExt.LmpRegionId + iStyle,
+                lpLightmapBase,
+                lpLightmapAdd
+              );
+              LightmapMegatexture.UpdateTextureCoords(
+                lpFaceExt.LmpMegaId,
+                lpFaceExt.LmpRegionId + iStyle,
+                @lpFaceExt.LmpCoords[0],
+                @lpFaceExt.LmpMegaCoords[iStyle*lpFaceExt.Polygon.CountVertecies],
+                lpFaceExt.Polygon.CountVertecies
+              );
+            end;
+        end;
+    end;
+
+  // 4. Process Entity Face's with lightmaps
+  for iBrushModel:=1 to (Map.CountBrushModels - 1) do
+    begin
+      lpBrushModelExt:=@Map.BrushModelExtList[iBrushModel];
+      for iFace:=lpBrushModelExt.BaseBModel.iFirstFace to lpBrushModelExt.iLastFace do
+        begin
+          lpFaceExt:=@Map.FaceExtList[iFace];
+
+          if (lpFaceExt.isDummyLightmaps) then Continue;
+
+          tmpSize.X:=lpFaceExt.LmpSize.X*lpFaceExt.CountLightStyles;
+          tmpSize.Y:=lpFaceExt.LmpSize.Y;
+          if (LightmapMegatexture.IsCanReserveTexture(tmpSize) = False) then
+            begin
+              LightmapMegatexture.UpdateTextureFromCurrentBuffer();
+              if (LightmapMegatexture.AllocNewMegaTexture(@MegaMemError) = False) then
+                begin
+                  ShowMessage(GetMegaMemErrorInfo(MegaMemError));
+                  LightmapMegatexture.Clear();
+                  Exit;
+                end;
+            end;
+
+          lpFaceExt.LmpMegaId:=LightmapMegatexture.CurrentMegatextureIndex;
+          lpFaceExt.LmpRegionId:=LightmapMegatexture.ReserveTexture(lpFaceExt.LmpSize);
+          LightmapMegatexture.UpdateCurrentBufferFromArray(
+            lpFaceExt.LmpMegaId,
+            lpFaceExt.LmpRegionId,
+            @lpFaceExt.Lightmaps[0],
+            nil
+          );
+          LightmapMegatexture.UpdateTextureCoords(
+            lpFaceExt.LmpMegaId,
+            lpFaceExt.LmpRegionId,
+            @lpFaceExt.LmpCoords[0],
+            @lpFaceExt.LmpMegaCoords[0],
+            lpFaceExt.Polygon.CountVertecies
+          );
+          for iStyle:=1 to (lpFaceExt.CountLightStyles - 1) do
+            begin
+              LightmapMegatexture.ReserveTexture(lpFaceExt.LmpSize);
+              lpLightmapBase:=@lpFaceExt.Lightmaps[0];
+              lpLightmapAdd:=lpLightmapBase;
+              Inc(lpLightmapAdd, iStyle*lpFaceExt.LmpSquare);
+              LightmapMegatexture.UpdateCurrentBufferFromArray(
+                lpFaceExt.LmpMegaId,
+                lpFaceExt.LmpRegionId + iStyle,
+                lpLightmapBase,
+                lpLightmapAdd
+              );
+              LightmapMegatexture.UpdateTextureCoords(
+                lpFaceExt.LmpMegaId,
+                lpFaceExt.LmpRegionId + iStyle,
+                @lpFaceExt.LmpCoords[0],
+                @lpFaceExt.LmpMegaCoords[iStyle*lpFaceExt.Polygon.CountVertecies],
+                lpFaceExt.Polygon.CountVertecies
+              );
+            end;
+        end;
+    end;
+
+  LightmapMegatexture.UpdateTextureFromCurrentBuffer();
+  LightmapMegatexture.UnbindMegatexture3D();
+  {$R+}
+end;
+
+procedure TMainForm.GenerateBasetextures();
 var
   i: Integer;
 begin
   {$R-}
-  Self.VSyncManager.Synchronize();
-  do_movement(CameraSpeed*Self.VSyncManager.SyncInterval);
-  
-  Self.Camera.gluLookAtUpdate;
-  Self.RayTracer.UpdateModelMatrix();
-  glClear(glBufferClearBits);
-
-  if (Self.isBspLoad) then
+  for i:=0 to (Map.TextureLump.nCountTextures - 1) do
     begin
-      if (Self.NoPVSMenu.Checked = False) then
+      BasetextureMng.AppendBasetexture(Map.TextureLump.Wad3Textures[i]);
+    end;
+                 
+  for i:=0 to (Map.CountFaces - 1) do
+    begin
+      Map.FaceExtList[i].TexRenderId:=
+        BasetextureMng.GetBasetextureIdByName(Map.FaceExtList[i].TexName);
+      if (Map.FaceExtList[i].TexRenderId < 0) then
         begin
-          // Render World Brush Faces with lightmaps
-          if (Self.WireframeWorldBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
-          for i:=0 to (Self.Bsp30.CountFaces - 1) do
-            begin
-              if (Self.FacesIndexToRender[i] = False) then Continue;
-
-              Self.RenderFaceInfo.lpFaceInfo:=@Self.Bsp30.FaceInfos[i];
-              RenderFaceLmp(Self.RenderFaceInfo);
-            end;
-          if (Self.WireframeWorldBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
-
-          // Render World Brush Faces without lightmaps
-          glPolygonMode(GL_BACK, GL_LINE);
-          for i:=0 to (Self.Bsp30.CountFaces - 1) do
-            begin
-              if (Self.FacesIndexToRender[i] = False) then Continue;
-
-              RenderFaceNoLmp(@Self.Bsp30.FaceInfos[i]);
-            end;
-          glPolygonMode(GL_BACK, GL_FILL);
-
-          // Render EntBrush Faces with lightmaps
-          if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
-          for i:=1 to (Self.Bsp30.CountFaces - 1) do
-            begin
-              if (Self.BrushIndexToRender[i] = False) then Continue;
-
-              Self.RenderFaceInfo.lpFaceInfo:=@Self.Bsp30.FaceInfos[i];
-              RenderFaceLmp(Self.RenderFaceInfo);
-            end;
-          if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
-
-          // Render EntBrush Faces without lightmaps
-          glPolygonMode(GL_BACK, GL_LINE);
-          for i:=0 to (Self.Bsp30.CountFaces - 1) do
-            begin
-              if (Self.BrushIndexToRender[i] = False) then Continue;
-
-              RenderFaceNoLmp(@Self.Bsp30.FaceInfos[i]);
-            end;
-          glPolygonMode(GL_BACK, GL_FILL);
-        end
-      else
-        begin
-          // Render all Faces with lightmaps
-          if (Self.WireframeWorldBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
-          if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
-          for i:=0 to (Self.Bsp30.CountFaces - 1) do
-            begin
-              Self.RenderFaceInfo.lpFaceInfo:=@Self.Bsp30.FaceInfos[i];
-              RenderFaceLmp(Self.RenderFaceInfo);
-            end;
-          if (Self.WireframeWorldBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
-          if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
-
-          // Render all Faced without lightmaps
-          glPolygonMode(GL_BACK, GL_LINE);
-          for i:=0 to (Self.Bsp30.CountFaces - 1) do
-            begin
-              RenderFaceNoLmp(@Self.Bsp30.FaceInfos[i]);
-            end;
-          glPolygonMode(GL_BACK, GL_FILL);
-        end;
-
-      // Render Selected Face
-      if (Self.SelectedFaceIndex >= 0) then
-        begin
-          glPushMatrix();
-          glTranslatef(
-            Self.Bsp30.FaceInfos[Self.SelectedFaceIndex].Plane.vNormal.x,
-            Self.Bsp30.FaceInfos[Self.SelectedFaceIndex].Plane.vNormal.y,
-            Self.Bsp30.FaceInfos[Self.SelectedFaceIndex].Plane.vNormal.z);
-          Self.RenderFaceInfo.lpFaceInfo:=@Self.Bsp30.FaceInfos[Self.SelectedFaceIndex];
-          RenderSelectedFace(Self.RenderFaceInfo, FaceSelectedColor);
-          glPopMatrix();
-        end; //}
-
-      // Render "Camera VisLeaf"
-      if ((Self.CameraLeafId > 0) and (Self.RenderBBOXVisLeaf1.Checked)) then
-        begin
-          glPushMatrix();
-          glTranslatef(
-            Self.lpCameraLeaf.BBOXf.vMin.x,
-            Self.lpCameraLeaf.BBOXf.vMin.y,
-            Self.lpCameraLeaf.BBOXf.vMin.z
-          );
-          glScalef(
-            Self.lpCameraLeaf.SizeBBOXf.x,
-            Self.lpCameraLeaf.SizeBBOXf.y,
-            Self.lpCameraLeaf.SizeBBOXf.z
-          );
-          glCallList(Self.BaseCubeLeafWireframeList);
-          glPopMatrix();
-
-          // Render other VisLeafs
-          for i:=1 to Self.lpCameraLeaf.CountPVS do
-            begin
-              if (Self.LeafIndexToRender[i - 1] = False) then Continue;
-              if (i = Self.CameraLeafId) then Continue;
-
-              glPushMatrix();
-              glTranslatef(
-                Self.Bsp30.VisLeafInfos[i].BBOXf.vMin.x,
-                Self.Bsp30.VisLeafInfos[i].BBOXf.vMin.y,
-                Self.Bsp30.VisLeafInfos[i].BBOXf.vMin.z
-              );
-              glScalef(
-                Self.Bsp30.VisLeafInfos[i].SizeBBOXf.x,
-                Self.Bsp30.VisLeafInfos[i].SizeBBOXf.y,
-                Self.Bsp30.VisLeafInfos[i].SizeBBOXf.z
-              );
-              glCallList(Self.SecondCubeLeafWireframeList);
-              glPopMatrix();
-            end; //}
+          Map.FaceExtList[i].TexRenderId:=BASETEXTURE_DUMMY_ID;
         end;
     end;
 
-  glCallList(Self.StartOrts);
+  BasetextureMng.UnbindBasetexture();
+  {$R+}
+end;
 
-  if (Self.isCanRender) then
+procedure TMainForm.UpdFaceDrawState();
+begin
+  {$R-}
+  Self.FaceDrawState:=FACEDRAW_ALL;
+  if (Self.DisableTexturesMenu.Checked) then
     begin
-      InvalidateRect(Self.Handle, nil, False);
-      SwapBuffers(Self.Canvas.Handle);
+      Self.FaceDrawState:=Self.FaceDrawState or FACEDRAW_LIGHTMAP_ONLY;
     end;
-
-  Dec(Self.tickCount);
-  if (Self.tickCount <= 0) then
+  if (Self.DisableLightmapsMenu.Checked) then
     begin
-      Self.tickCount:=MAX_TICKCOUNT;
-
-      Self.StatusBar.Panels.Items[0].Text:=VecToStr(Self.Camera.ViewPosition);
-      if (Self.isBspLoad) then
-        begin
-          Self.StatusBar.Panels.Items[1].Text:='Camera in Leaf: '
-            + IntToStr(Self.CameraLeafId);
-        end;
-      Self.StatusBar.Update;
+      Self.FaceDrawState:=Self.FaceDrawState or FACEDRAW_BASETEXTURE_ONLY;
     end;
   {$R+}
 end;
+
+procedure TMainForm.DrawScence(Sender: TObject);
+var
+  i: Integer;
+begin
+  {$R-}
+  Self.RenderTimer.UpdDeltaTime();
+  if (Self.PressedKeyShift) then
+    begin
+      do_movement(CameraSpeedAcc*Self.RenderTimer.DeltaTime);
+    end
+  else
+    begin
+      do_movement(CameraSpeed*Self.RenderTimer.DeltaTime);
+    end;
+  Self.CollisionProcess();
+  Self.GetVisleafRenderList();
+  Self.Camera.glModelViewUpdate;
+  glClear(GL_DEPTH_BUFFER_BIT or GL_COLOR_BUFFER_BIT);
+
+  if (isBspLoad) then
+    begin
+      //////////////////////////////////////////////////////////////////////////
+      LightmapMegatexture.UnbindMegatexture3D();
+      BasetextureMng.UnbindBasetexture();
+      //
+      case (Self.FaceDrawState) of
+        FACEDRAW_ALL:
+          begin
+            PreRenderFaces(True, True, True);
+            // Render World Brush Faces
+            for i:=0 to (Map.CountFaces - 1) do
+              begin
+                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
+                  (Map.FaceExtList[i].BrushId > 0)) then Continue;
+                //
+                BasetextureMng.BindBasetexture(Map.FaceExtList[i].TexRenderId);
+                LightmapMegatexture.BindMegatexture3D(Map.FaceExtList[i].LmpMegaId);
+                //
+                if (SelectedStyle < Map.FaceExtList[i].CountLightStyles)
+                then RenderFaceLmpBT(@Map.FaceExtList[i], SelectedStyle)
+                else RenderFaceLmpBT(@Map.FaceExtList[i], 0);
+              end;
+            // Render EntBrush Faces
+            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
+            for i:=1 to (Map.CountFaces - 1) do
+              begin
+                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
+                  (Map.FaceExtList[i].BrushId = 0)) then Continue;
+                //
+                BasetextureMng.BindBasetexture(Map.FaceExtList[i].TexRenderId);
+                LightmapMegatexture.BindMegatexture3D(Map.FaceExtList[i].LmpMegaId);
+                //
+                if (SelectedStyle < Map.FaceExtList[i].CountLightStyles)
+                then RenderFaceLmpBT(@Map.FaceExtList[i], SelectedStyle)
+                else RenderFaceLmpBT(@Map.FaceExtList[i], 0);
+              end;
+            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
+            //
+            PostRenderFaces(True, True, True);
+            LightmapMegatexture.UnbindMegatexture3D();
+            BasetextureMng.UnbindBasetexture();
+          end;
+        FACEDRAW_LIGHTMAP_ONLY:
+          begin
+            PreRenderFaces(True, False, True);
+            // Render World Brush Faces
+            for i:=0 to (Map.CountFaces - 1) do
+              begin
+                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
+                  (Map.FaceExtList[i].BrushId > 0)) then Continue;
+                //
+                LightmapMegatexture.BindMegatexture3D(Map.FaceExtList[i].LmpMegaId);
+                //
+                if (SelectedStyle < Map.FaceExtList[i].CountLightStyles)
+                then RenderFaceLmp(@Map.FaceExtList[i], SelectedStyle)
+                else RenderFaceLmp(@Map.FaceExtList[i], 0);
+              end;
+            // Render EntBrush Faces
+            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
+            for i:=1 to (Map.CountFaces - 1) do
+              begin
+                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
+                  (Map.FaceExtList[i].BrushId = 0)) then Continue;
+                //
+                LightmapMegatexture.BindMegatexture3D(Map.FaceExtList[i].LmpMegaId);
+                //
+                if (SelectedStyle < Map.FaceExtList[i].CountLightStyles)
+                then RenderFaceLmp(@Map.FaceExtList[i], SelectedStyle)
+                else RenderFaceLmp(@Map.FaceExtList[i], 0);
+              end;
+            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
+            //
+            PostRenderFaces(True, False, True);
+            LightmapMegatexture.UnbindMegatexture3D();
+          end;
+        FACEDRAW_BASETEXTURE_ONLY:
+          begin
+            PreRenderFaces(True, True, False);
+            // Render World Brush Faces
+            for i:=0 to (Map.CountFaces - 1) do
+              begin
+                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
+                  (Map.FaceExtList[i].BrushId > 0)) then Continue;
+                //
+                BasetextureMng.BindBasetexture(Map.FaceExtList[i].TexRenderId);
+                RenderFaceBT(@Map.FaceExtList[i])
+              end;
+            // Render EntBrush Faces
+            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
+            for i:=1 to (Map.CountFaces - 1) do
+              begin
+                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
+                  (Map.FaceExtList[i].BrushId = 0)) then Continue;
+                //
+                BasetextureMng.BindBasetexture(Map.FaceExtList[i].TexRenderId);
+                RenderFaceBT(@Map.FaceExtList[i])
+              end;
+            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
+            //
+            PostRenderFaces(True, True, False);
+            BasetextureMng.UnbindBasetexture();
+          end;
+        FACEDRAW_DISABLE:
+          begin
+
+          end;
+      end;
+      //////////////////////////////////////////////////////////////////////////}
+
+      // Render Highlight Wireframe for EntBrush Faces
+      if (Self.WireframeHighlighEntBrushesMenu.Checked) then
+        begin
+          glPolygonMode(GL_BACK, GL_LINE);
+          PreRenderFaces(True, False, False);
+          //
+          for i:=1 to (Map.CountFaces - 1) do
+            begin
+              if ((FacesIndexToRender[i] <> RenderFrameIterator) or
+                (Map.FaceExtList[i].BrushId = 0)) then Continue;
+              //
+              RenderFaceCustomColor4f(@Map.FaceExtList[i], @Self.FaceWireframeColor[0]);
+            end;
+          //
+          PostRenderFaces(True, False, False);
+          glPolygonMode(GL_BACK, GL_FILL);
+        end;
+      //////////////////////////////////////////////////////////////////////////}
+
+      // Render Selected Face
+      if (SelectedFaceIndex >= 0) then
+        begin
+          glEnable(GL_POLYGON_OFFSET);
+          PreRenderFaces(True, False, False);
+          //
+          RenderFaceCustomColor4f(CurrFaceExt, @Self.FaceSelectedColor[0]);
+          //
+          PostRenderFaces(True, False, False);
+          glDisable(GL_POLYGON_OFFSET);
+        end; //}
+
+
+      // Render "Camera VisLeaf"
+      if ((CameraLeafId > 0) and (Self.RenderBBOXVisLeaf.Checked)) then
+        begin
+          glPushMatrix();
+          glTranslatef(
+            lpCameraLeaf.BBOXf.vMin.x,
+            lpCameraLeaf.BBOXf.vMin.y,
+            lpCameraLeaf.BBOXf.vMin.z
+          );
+          glScalef(
+            lpCameraLeaf.SizeBBOXf.x,
+            lpCameraLeaf.SizeBBOXf.y,
+            lpCameraLeaf.SizeBBOXf.z
+          );
+          glCallList(BaseCubeLeafWireframeList);
+          glPopMatrix();
+
+          // Render other VisLeafs
+          for i:=1 to lpCameraLeaf.CountPVS do
+            begin
+              if (LeafIndexToRender[i - 1] <> RenderFrameIterator) then Continue;
+              if (i = CameraLeafId) then Continue;
+
+              glPushMatrix();
+              glTranslatef(
+                Map.VisLeafExtList[i].BBOXf.vMin.x,
+                Map.VisLeafExtList[i].BBOXf.vMin.y,
+                Map.VisLeafExtList[i].BBOXf.vMin.z
+              );
+              glScalef(
+                Map.VisLeafExtList[i].SizeBBOXf.x,
+                Map.VisLeafExtList[i].SizeBBOXf.y,
+                Map.VisLeafExtList[i].SizeBBOXf.z
+              );
+              glCallList(SecondCubeLeafWireframeList);
+              glPopMatrix();
+            end; //}
+        end;
+
+      // Render BBOX of Entity "worldspawn" (total Map BBOX)
+      glPushMatrix();
+      glTranslatef(
+        Map.MapBBOX.vMin.x,
+        Map.MapBBOX.vMin.y,
+        Map.MapBBOX.vMin.z
+      );
+      glScalef(
+        Map.MapBBOXSize.x,
+        Map.MapBBOXSize.y,
+        Map.MapBBOXSize.z
+      );
+      glCallList(SecondCubeLeafWireframeList);
+      glPopMatrix();
+    end;
+
+  glCallList(StartOrts);
+
+  Self.RenderContext.SwapBuffers();
+
+  if (Self.RenderTimer.ElaspedTime >= RenderInfoDelayUpd) then
+    begin
+      Self.RenderTimer.ResetCounter();
+      Self.LabelCameraFPS.Caption:='FPS: ' + Self.RenderTimer.GetStringFPS();
+      Self.LabelCameraPos.Caption:=VecToStr(Self.Camera.ViewPosition);
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.Idle(Sender: TObject; var Done: Boolean);
+begin
+  {$R-}
+  Done:=False;
+  Self.DrawScence(Sender);
+  {$R+}
+end;  // *)
 
 procedure TMainForm.FormResize(Sender: TObject);
 begin
   {$R-}
-  Self.UpdateOpenGLViewport(MaxRender);
-  Self.RayTracer.UpdateViewPort();
-  Self.RayTracer.UpdateProjectMatrix();
+  Self.PanelFaceInfo.Left:=Self.ClientWidth - Self.PanelFaceInfo.Width;
+  //
+  Self.LabelCameraFPS.Top:=Self.ClientHeight - Self.LabelCameraFPS.Height;
+  Self.LabelCameraPos.Top:=Self.ClientHeight - Self.LabelCameraPos.Height;
+  Self.LabelCameraLeafId.Top:=Self.ClientHeight - Self.LabelCameraLeafId.Height;
+  Self.LabelStylePage.Top:=Self.ClientHeight - Self.LabelStylePage.Height;
+  //
+  Self.PanelRT.ClientWidth:=Self.PanelFaceInfo.Left - 4;
+  Self.PanelRT.ClientHeight:=Self.LabelCameraPos.Top - 4;
   {$R+}
 end;
 
-procedure TMainForm.FormMouseDown(Sender: TObject; Button: TMouseButton;
+procedure TMainForm.PanelRTResize(Sender: TObject);
+begin
+  {$R-}
+  if (Self.Camera <> nil) then
+    begin
+      Self.Camera.SetProjMatrix(
+        Self.PanelRT.ClientWidth,
+        Self.PanelRT.ClientHeight,
+        FieldOfView,
+        Self.RenderRange
+      );
+      Self.Camera.glProjectionAndViewPortUpdate();
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.PanelRTMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
   {$R-}
+  Self.MousePos.X:=X;
+  Self.MousePos.Y:=Y;
+
   if (mbLeft = Button) then Self.isLeftMouseClicked:=True;
   if (mbRight = Button) then
     begin
       Self.isRightMouseClicked:=True;
-      Self.GetMouseClickRay(X, Y);
+      Self.Camera.GetTraceLineByMouseClick(Self.MousePos, @Self.MouseRay);
       Self.GetFaceIndexByRay();
     end;
   {$R+}
 end;
 
-procedure TMainForm.FormMouseMove(Sender: TObject; Shift: TShiftState; X,
+procedure TMainForm.PanelRTMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
-var
-  isViewDirChanged: Boolean;
 begin
   {$R-}
+  Self.MousePos.X:=X;
+  Self.MousePos.Y:=Y;
   if (Self.isLeftMouseClicked) then
     begin
-      isViewDirChanged:=False;
-      if (X <> Self.mdx) then
+      if (Self.MousePos.X <> Self.MouseLastPos.X) then
         begin
           // MouseFreq -> [radian / pixel]
           // (X - Self.mdx) -> [pixel]
           // (X - Self.mdx)*MouseFreq -> [pixel]*[radian / pixel] -> [radian]
-          Self.Camera.UpDateViewDirectionByMouseX((X - Self.mdx)*MouseFreq);
-          isViewDirChanged:=True;
-        end;
-      if (Y <> Self.mdy) then
+          Self.Camera.UpDateViewDirectionByMouseX((Self.MousePos.X - Self.MouseLastPos.X)*MouseFreq);
+        end; //}
+      if (Self.MousePos.Y <> Self.MouseLastPos.Y) then
         begin
-          Self.Camera.UpDateViewDirectionByMouseY((Self.mdy - Y)*MouseFreq);
-          isViewDirChanged:=True;
-        end;
-
-      if (isViewDirChanged) then
-        begin
-          Self.GetFrustum();
-          if (Self.isBspLoad) then
-            begin
-              Self.GetRenderList();
-            end;
-        end;
+          Self.Camera.UpDateViewDirectionByMouseY((Self.MouseLastPos.Y - Self.MousePos.Y)*MouseFreq);
+        end; //}
     end;
-  Self.mdx:=X;
-  Self.mdy:=Y;
+  Self.MouseLastPos:=Self.MousePos;
   {$R+}
 end;
 
-procedure TMainForm.FormMouseUp(Sender: TObject; Button: TMouseButton;
+procedure TMainForm.PanelRTMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
   {$R-}
@@ -870,36 +1212,21 @@ procedure TMainForm.FormKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
   {$R-}
-  if (Key < 1024) then Self.PressedKeys[Ord(Key)]:=True;
+  if (Key = Byte('W')) then Self.PressedKeyW:=True;
+  if (Key = Byte('S')) then Self.PressedKeyS:=True;
+  if (Key = Byte('A')) then Self.PressedKeyA:=True;
+  if (Key = Byte('D')) then Self.PressedKeyD:=True;
+  if (Key = KEYBOARD_SHIFT) then Self.PressedKeyShift:=True;
 
-  if (Self.isBspLoad = False) then Exit;
+  if (isBspLoad = False) then Exit;
 
-  if (Ord(Key) = OrdF) then
+  if (Key = Byte('F')) then
     begin
-      Inc(Self.RenderFaceInfo.Page);
-      if (Self.RenderFaceInfo.Page > 3) then Self.RenderFaceInfo.Page:=0;
+      Inc(SelectedStyle);
+      if (SelectedStyle > 3) then SelectedStyle:=0;
 
-      if (Self.SelectedFaceIndex >= 0) then
-        begin
-          if (Self.RenderFaceInfo.Page >=
-            Self.Bsp30.FaceInfos[Self.SelectedFaceIndex].CountLightStyles) then
-            begin
-              Self.SelectedFaceIndex:=-1;
-              if (Assigned(Unit2.FaceToolForm)) then
-                begin
-                  Unit2.FaceToolForm.ClearFaceVisualInfo();
-                end;
-            end
-        end;
-
-      if (Assigned(Unit2.FaceToolForm)) then
-        begin
-          Unit2.FaceToolForm.SelectedStyle:=Self.RenderFaceInfo.Page;
-          Unit2.FaceToolForm.UpdateFaceVisualInfo();
-        end;
-
-      Self.StatusBar.Panels.Items[2].Text:='Style page (0..3): '
-        + IntToStr(Self.RenderFaceInfo.Page);
+      Self.LabelStylePage.Caption:='Style page (0..3): '
+        + IntToStr(SelectedStyle);
     end;
   {$R+}
 end;
@@ -908,17 +1235,211 @@ procedure TMainForm.FormKeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
   {$R-}
-  if (Key < 1024) then Self.PressedKeys[Ord(Key)]:=False;
+  if (Key = Byte('W')) then Self.PressedKeyW:=False;
+  if (Key = Byte('S')) then Self.PressedKeyS:=False;
+  if (Key = Byte('A')) then Self.PressedKeyA:=False;
+  if (Key = Byte('D')) then Self.PressedKeyD:=False;
+  if (Key = KEYBOARD_SHIFT) then Self.PressedKeyShift:=False;
   {$R+}
 end;
 
-procedure TMainForm.FormClick(Sender: TObject);
+procedure TMainForm.UpdateFaceVisualInfo();
+var
+  i: Integer;
 begin
   {$R-}
-  if (Self.isCanRender = False) then
+  if (SelectedFaceIndex < 0) then
     begin
-      Self.isCanRender:=True;
-      Self.Paint();
+      Self.ClearFaceVisualInfo();
+      Exit;
+    end;
+
+  Self.EditFaceIndex.Caption:=' ' + IntToStr(SelectedFaceIndex);
+  if (CurrFaceExt.BrushId = 0) then
+    begin
+      Self.EditFaceBrushIndex.Caption:=' World';
+    end
+  else
+    begin
+      Self.EditFaceBrushIndex.Caption:=' *' + IntToStr(CurrFaceExt.BrushId);
+    end;
+  Self.EditFacePlaneIndex.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.iPlane);
+  Self.EditFaceCountVertex.Caption:=' ' + IntToStr(CurrFaceExt.Polygon.CountVertecies);
+  Self.EditFaceTexInfo.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.iTextureInfo);
+
+  Self.EditTexName.Caption:=' ' + PAnsiChar(CurrFaceExt.TexName);
+  Self.EditTexSize.Caption:=' ' +
+    IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].MipWidth[0])
+    + 'x' +
+    IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].MipHeight[0]);
+  if (CurrFaceExt.isDummyTexture)
+  then Self.EditTexWAD.Caption:=' #EXTERNAL'
+  else Self.EditTexWAD.Caption:=' #INTERNAL';
+
+  Self.EditLmpSize.Caption:='';
+  Self.EditLmpStyle1.Caption:='';
+  Self.EditLmpStyle2.Caption:='';
+  Self.EditLmpStyle3.Caption:='';
+  if (CurrFaceExt.CountLightStyles > 0) then
+    begin
+      Self.EditLmpSize.Caption:=' ' + IntToStr(CurrFaceExt.LmpSize.X) + 'x' +
+        IntToStr(CurrFaceExt.LmpSize.Y);
+
+      if (CurrFaceExt.BaseFace.nStyles[1] >= 0) then
+        begin
+          i:=FindLightStylePair(
+            @Map.LightStylesList[0],
+            Map.CountLightStyles,
+            CurrFaceExt.BaseFace.nStyles[1]
+          );
+          Self.EditLmpStyle1.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.nStyles[1]) +
+            ': "' + Map.LightStylesList[i].TargetName + '"';
+        end;
+      if (CurrFaceExt.BaseFace.nStyles[2] >= 0) then
+        begin
+          i:=FindLightStylePair(
+            @Map.LightStylesList[0],
+            Map.CountLightStyles,
+            CurrFaceExt.BaseFace.nStyles[2]
+          );
+          Self.EditLmpStyle2.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.nStyles[2]) +
+            ': "' + Map.LightStylesList[i].TargetName + '"';
+        end;
+      if (CurrFaceExt.BaseFace.nStyles[3] >= 0) then
+        begin
+          i:=FindLightStylePair(
+            @Map.LightStylesList[0],
+            Map.CountLightStyles,
+            CurrFaceExt.BaseFace.nStyles[3]
+          );
+          Self.EditLmpStyle3.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.nStyles[3]) +
+            ': "' + Map.LightStylesList[i].TargetName + '"';
+        end;
+    end;
+
+  Self.RadioGroupLmp.Items.Clear();
+  for i:=0 to (CurrFaceExt.CountLightStyles - 1) do
+    begin
+      Self.RadioGroupLmp.Items.Append('Style ' + IntToStr(i));
+    end;
+  Self.RadioGroupLmp.ItemIndex:=SelectedStyle;
+
+  if (BasetextureMng.DrawThumbnailToBitmap(
+        BaseThumbnailBMP,
+        CurrFaceExt.TexRenderId
+      ) = False) then
+    begin
+      BaseThumbnailBMP.Canvas.FillRect(BaseThumbnailBMP.Canvas.ClipRect);
+    end;
+  Self.ImagePreviewBT.Canvas.Draw(0, 0, BaseThumbnailBMP);
+
+  Self.Update();
+  {$R+}
+end;
+
+procedure TMainForm.ClearFaceVisualInfo();
+begin
+  {$R-}
+  Self.EditFaceIndex.Caption:='';
+  Self.EditFaceBrushIndex.Caption:='';
+  Self.EditFacePlaneIndex.Caption:='';
+  Self.EditFaceCountVertex.Caption:='';
+  Self.EditFaceTexInfo.Caption:='';
+
+  Self.EditTexName.Caption:='';
+  Self.EditTexSize.Caption:='';
+  Self.EditTexWAD.Caption:='';
+  Self.ImagePreviewBT.Canvas.Brush.Color:=clBlack;
+  Self.ImagePreviewBT.Canvas.FillRect(Self.ImagePreviewBT.Canvas.ClipRect);
+
+  Self.EditLmpSize.Caption:='';
+  Self.EditLmpStyle1.Caption:='';
+  Self.EditLmpStyle2.Caption:='';
+  Self.EditLmpStyle3.Caption:='';
+
+  Self.RadioGroupLmp.Items.Clear();
+  Self.Update();
+  {$R+}
+end;
+
+
+procedure TMainForm.ButtonSaveLmpClick(Sender: TObject);
+var
+  LmpBitmap: TBitmap;
+begin
+  {$R-}
+  if (SelectedFaceIndex < 0) then Exit;
+  if (Self.RadioGroupLmp.ItemIndex >= CurrFaceExt.CountLightStyles) then Exit;
+  if (Self.RadioGroupLmp.ItemIndex < 0) then Exit;
+  if (CurrFaceExt.CountLightmaps <= 0) then Exit;
+
+  if (Self.SaveDialogBMP.Execute) then
+    begin
+      LmpBitmap:=TBitmap.Create();
+      LmpBitmap.PixelFormat:=pf24bit;
+      LmpBitmap.Width:=CurrFaceExt.LmpSize.X;
+      LmpBitmap.Height:=CurrFaceExt.LmpSize.Y;
+      //
+      CopyRGB888toBitmap(
+        @CurrFaceExt.Lightmaps[CurrFaceExt.LmpSquare*Self.RadioGroupLmp.ItemIndex],
+        LmpBitmap
+      );  
+      //
+      LmpBitmap.SaveToFile(Self.SaveDialogBMP.FileName);
+      LmpBitmap.Destroy(); //}
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.ButtonLoadLmpClick(Sender: TObject);
+var
+  LmpBitmap: TBitmap;
+begin
+  {$R-}
+  if (SelectedFaceIndex < 0) then Exit;
+  if (Self.RadioGroupLmp.ItemIndex >= CurrFaceExt.CountLightStyles) then Exit;
+  if (Self.RadioGroupLmp.ItemIndex < 0) then Exit;
+  if (CurrFaceExt.CountLightmaps <= 0) then Exit;
+
+  if (Self.OpenDialogBMP.Execute) then
+    begin
+      LmpBitmap:=TBitmap.Create();
+      LmpBitmap.LoadFromFile(Self.OpenDialogBMP.FileName);
+      if ((LmpBitmap.Width <> CurrFaceExt.LmpSize.X)
+        or (LmpBitmap.Height <> CurrFaceExt.LmpSize.Y)) then
+        begin
+          ShowMessage('Error! Loaded Bitmap have difference size:' + LF +
+            'Bitmap size (X, Y): (' + IntToStr(LmpBitmap.Width) + '; ' +
+            IntToStr(LmpBitmap.Height) + ')' + LF +
+            'Requarement size (X, Y): (' + IntToStr(CurrFaceExt.LmpSize.X) +
+            LF + '; ' + IntToStr(CurrFaceExt.LmpSize.Y) + ')');
+          Exit;
+        end;
+
+      if (Self.RadioGroupLmp.ItemIndex = 0) then
+        begin
+          CopyBitmapToRGB888(LmpBitmap, @CurrFaceExt.Lightmaps[0]);
+          LightmapMegatexture.UpdateTextureFromArray(
+            CurrFaceExt.LmpMegaId,
+            CurrFaceExt.LmpRegionId,
+            @CurrFaceExt.Lightmaps[0],
+            nil
+          );
+        end
+      else
+        begin
+          CopyBitmapToRGB888(
+            LmpBitmap,
+            @CurrFaceExt.Lightmaps[CurrFaceExt.LmpSquare*Self.RadioGroupLmp.ItemIndex]
+          );
+          LightmapMegatexture.UpdateTextureFromArray(
+            CurrFaceExt.LmpMegaId,
+            CurrFaceExt.LmpRegionId + Self.RadioGroupLmp.ItemIndex,
+            @CurrFaceExt.Lightmaps[0],
+            @CurrFaceExt.Lightmaps[CurrFaceExt.LmpSquare*Self.RadioGroupLmp.ItemIndex]
+          );
+        end;
+      Self.UpdateFaceVisualInfo();
     end;
   {$R+}
 end;
@@ -927,287 +1448,110 @@ end;
 procedure TMainForm.LoadMapMenuClick(Sender: TObject);
 begin
   {$R-}
-  Self.isCanRender:=False;
   if (Self.OpenDialogBsp.Execute) then
     begin
-      Self.isBspLoad:=LoadBSP30FromFile(Self.OpenDialogBsp.FileName, @Self.Bsp30);
-      if (Self.isBspLoad = False) then
+      isBspLoad:=LoadBSP30FromFile(Self.OpenDialogBsp.FileName, @Map);
+      if (isBspLoad = False) then
         begin
           ShowMessage('Error load Map: ' + LF
-            + ShowLoadBSPMapError(Self.Bsp30.LoadState)
+            + ShowLoadBSPMapError(Map.LoadState)
           );
-          FreeMapBSP(@Self.Bsp30);
+          FreeMapBSP(@Map);
         end
       else
         begin
           Self.LoadMapMenu.Enabled:=False;
           Self.CloseMapMenu.Enabled:=True;
           Self.SaveMapMenu.Enabled:=True;
-          Self.LoadallLightmapsMenu.Enabled:=True;
-          Self.SaveallLightmapsMenu.Enabled:=True;
+          Self.GotoFaceIdSubmenu.Enabled:=True;
+          Self.GotoVisLeafIdSubMenu.Enabled:=True;
+          Self.GotoBModelIdSubMenu.Enabled:=True;
+          Self.GotoEntTGNSubMenu.Enabled:=True;
           Self.Caption:=Self.OpenDialogBsp.FileName;
 
-          Self.FirstSpawnEntityId:=FindFirstSpawnEntity(Self.Bsp30.Entities,
-            Self.Bsp30.CountEntities);
-          if (Self.FirstSpawnEntityId >= 1) then
+          FirstSpawnEntityId:=FindFirstSpawnEntity(@Map.Entities[0], Map.CountEntities);
+          if (FirstSpawnEntityId >= 1) then
             begin
               Self.Camera.ResetCamera(
-                Self.Bsp30.Entities[Self.FirstSpawnEntityId].Origin,
-                Self.Bsp30.Entities[Self.FirstSpawnEntityId].Angles.x*AngleToRadian,
-                Self.Bsp30.Entities[Self.FirstSpawnEntityId].Angles.y*AngleToRadian - Pi/2
+                Map.Entities[FirstSpawnEntityId].Origin,
+                Map.Entities[FirstSpawnEntityId].Angles.x*AngleToRadian,
+                Map.Entities[FirstSpawnEntityId].Angles.y*AngleToRadian - Pi/2
               );
             end;
 
-          SetLength(Self.FacesIndexToRender, Self.Bsp30.CountFaces);
-          ZeroFillChar(@Self.FacesIndexToRender[0], Self.Bsp30.CountFaces);
+          FillChar(FacesIndexToRender[0], Map.CountFaces, not RenderFrameIterator);
+          FillChar(LeafIndexToRender[0], Map.CountVisLeafWithPVS, not RenderFrameIterator);
+          FillChar(BrushIndexToRender[0], Map.CountBrushModels, not RenderFrameIterator);
 
-          SetLength(Self.BrushIndexToRender, Self.Bsp30.CountFaces);
-          ZeroFillChar(@Self.BrushIndexToRender[0], Self.Bsp30.CountFaces);
-
-          SetLength(Self.LeafIndexToRender, Self.Bsp30.CountVisLeafWithPVS);
-          ZeroFillChar(@Self.LeafIndexToRender[0], Self.Bsp30.CountVisLeafWithPVS);
-
-          if (Assigned(Unit2.FaceToolForm)) then
-            begin
-              Unit2.FaceToolForm.lpMap:=@Self.Bsp30;
-            end;
+          Self.GenerateBasetextures();
+          Self.GenerateLightmapMegatexture();
         end;
     end;
-  Self.isCanRender:=True;
-  Self.Paint();
   {$R+}
 end;
 
 procedure TMainForm.CloseMapMenuClick(Sender: TObject);
 begin
   {$R-}
-  Self.isBspLoad:=False;
+  Self.Camera.ResetCamera(
+    DefaultCameraPos,
+    DefaultCameraPolarAngle,
+    DefaultCameraAzimutalAngle
+  );
+
+  isBspLoad:=False;
   Self.Caption:=MainFormCaption;
 
   Self.LoadMapMenu.Enabled:=True;
   Self.SaveMapMenu.Enabled:=False;
   Self.CloseMapMenu.Enabled:=False;
-  Self.LoadallLightmapsMenu.Enabled:=False;
-  Self.SaveallLightmapsMenu.Enabled:=False;
+  Self.GotoFaceIdSubmenu.Enabled:=False;
+  Self.GotoVisLeafIdSubMenu.Enabled:=False;
+  Self.GotoBModelIdSubMenu.Enabled:=False;
+  Self.GotoEntTGNSubMenu.Enabled:=False;
 
-  FreeMapBSP(@Self.Bsp30);
-  SetLength(Self.FacesIndexToRender, 0);
-  SetLength(Self.BrushIndexToRender, 0);
-  SetLength(Self.LeafIndexToRender, 0);
+  FreeMapBSP(@Map);
 
-  Self.CameraLeafId:=0;
-  Self.CameraLastLeafId:=0;
-  Self.FirstSpawnEntityId:=0;
-  Self.SelectedFaceIndex:=-1;
-  Self.lpCameraLeaf:=nil;
+  CameraLeafId:=0;
+  CameraLastLeafId:=0;
+  FirstSpawnEntityId:=0;
+  SelectedFaceIndex:=-1;
+  SelectedStyle:=0;
+  lpCameraLeaf:=nil;
+  CurrFaceExt:=nil;
 
-  Self.RenderFaceInfo.lpFaceInfo:=nil;
-  Self.RenderFaceInfo.Page:=0;
+  Self.LabelCameraLeafId.Caption:='No map load';
+  Self.LabelStylePage.Caption:='Style page (0..3): 0';
+  Self.ClearFaceVisualInfo();
 
-  Self.StatusBar.Panels.Items[1].Text:='No map load';
-  Self.StatusBar.Panels.Items[2].Text:='Style page (0..3): 0';
-
-  if (Assigned(Unit2.FaceToolForm)) then
-    begin
-      Unit2.FaceToolForm.ClearFaceVisualInfo();
-      Unit2.FaceToolForm.lpMap:=nil;
-    end;
+  LightmapMegatexture.Clear();
+  BasetextureMng.Clear();
   {$R+}
 end;
 
 procedure TMainForm.SaveMapMenuClick(Sender: TObject);
 begin
   {$R-}
-  if (Self.isBspLoad = False) then Exit;
+  if (isBspLoad = False) then Exit;
 
-  Self.isCanRender:=False;
   if (Self.SaveDialogBsp.Execute) then
     begin
-      SaveBSP30ToFile(Self.SaveDialogBsp.FileName, @Self.Bsp30);
+      SaveBSP30ToFile(Self.SaveDialogBsp.FileName, @Map);
     end;
-  Self.isCanRender:=True;
-  Self.Paint();
-  {$R+}
-end;
-
-procedure TMainForm.SaveallLightmapsMenuClick(Sender: TObject);
-const
-  mfUnusedColor: TRGBTriple = (rgbtBlue: 255; rgbtGreen:   0; rgbtRed: 255);
-  mfPageColor: array[0..3] of TRGBTriple = (
-    (rgbtBlue:   0; rgbtGreen:   0; rgbtRed: 255),
-    (rgbtBlue:   0; rgbtGreen: 255; rgbtRed:   0),
-    (rgbtBlue: 255; rgbtGreen:   0; rgbtRed:   0),
-    (rgbtBlue:   0; rgbtGreen: 255; rgbtRed: 255)
-  );
-var
-  i, j, w, h, k: Integer;
-  tmpBitmap, tmpFaceMap: TBitmap;
-  pBmp, pFaceMap: pRGBArray;
-  lpFaceInfo: PFaceInfo;
-  FaceIndex, FacePageIndex: Integer;
-begin
-  {$R-}
-  if (Self.isBspLoad = False) then Exit;
-  Self.isCanRender:=False;
-
-  if (Self.SaveDialogBMP.Execute) then
-    begin
-      w:=Round(Sqrt(Self.Bsp30.CountUnpackedLightmaps) + 1);
-      h:=Round(Self.Bsp30.CountUnpackedLightmaps/w + 1);
-
-      tmpBitmap:=TBitmap.Create();
-      tmpBitmap.PixelFormat:=pf24bit;
-      tmpBitmap.Width:=w;
-      tmpBitmap.Height:=h;
-
-      tmpFaceMap:=TBitmap.Create();
-      tmpFaceMap.PixelFormat:=pf24bit;
-      tmpFaceMap.Width:=w;
-      tmpFaceMap.Height:=h;
-
-      FaceIndex:=0;
-      lpFaceInfo:=@Self.Bsp30.FaceInfos[FaceIndex];
-      while (lpFaceInfo.CountLightStyles = 0) do
-        begin
-          Inc(FaceIndex);
-          Inc(lpFaceInfo);
-        end;
-
-      k:=0;
-      FacePageIndex:=0;
-      for i:=0 to (h - 1) do
-        begin
-          pBmp:=tmpBitmap.ScanLine[i];
-          pFaceMap:=tmpFaceMap.ScanLine[i];
-          for j:=0 to (w - 1) do
-            begin
-              if (FaceIndex < Self.Bsp30.CountFaces) then
-                begin
-                  RGB888toTRGBTriple(@lpFaceInfo.Lightmaps[FacePageIndex][k], pBmp^[j]);
-                  pFaceMap^[j]:=mfPageColor[FacePageIndex];
-
-                  Inc(k);
-                  if (k >= lpFaceInfo.LmpSquare) then
-                    begin
-                      k:=0;
-                      Inc(FacePageIndex);
-                    end;
-                  if (FacePageIndex >= lpFaceInfo.CountLightStyles) then
-                    begin
-                      FacePageIndex:=0;
-                      Inc(FaceIndex);
-                      Inc(lpFaceInfo);
-                    end;
-                  while (lpFaceInfo.CountLightStyles = 0) do
-                    begin
-                      Inc(FaceIndex);
-                      Inc(lpFaceInfo);
-                    end;
-                end
-              else
-                begin
-                  pBmp^[j]:=mfUnusedColor;
-                  pFaceMap^[j]:=mfUnusedColor;
-                end;
-            end;
-        end;
-
-      tmpBitmap.SaveToFile(Self.SaveDialogBMP.FileName + '.bmp');
-      tmpBitmap.Destroy();
-      tmpFaceMap.SaveToFile(Self.SaveDialogBMP.FileName + '_FaceMap.bmp');
-      tmpFaceMap.Destroy();
-    end;
-
-  Self.isCanRender:=True;
-  Self.Paint();
-  {$R+}
-end;
-
-procedure TMainForm.LoadallLightmapsMenuClick(Sender: TObject);
-var
-  i, j, k: Integer;
-  tmpBitmap: TBitmap;
-  pBmp: pRGBArray;
-  lpFaceInfo: PFaceInfo;
-  FaceIndex, FacePageIndex: Integer;
-begin
-  {$R-}
-  if (Self.isBspLoad = False) then Exit;
-  Self.isCanRender:=False;
-
-  if (Self.OpenDialogBMP.Execute) then
-    begin
-      tmpBitmap:=TBitmap.Create();
-      tmpBitmap.LoadFromFile(Self.OpenDialogBMP.FileName);
-      tmpBitmap.PixelFormat:=pf24bit;
-
-      FaceIndex:=0;
-      lpFaceInfo:=@Self.Bsp30.FaceInfos[FaceIndex];
-      while (lpFaceInfo.CountLightStyles = 0) do
-        begin
-          Inc(FaceIndex);
-          Inc(lpFaceInfo);
-        end;
-
-      k:=0;
-      FacePageIndex:=0;
-      for i:=0 to (tmpBitmap.Height - 1) do
-        begin
-          pBmp:=tmpBitmap.ScanLine[i];
-          for j:=0 to (tmpBitmap.Width - 1) do
-            begin
-              if (FaceIndex < Self.Bsp30.CountFaces) then
-                begin
-                  TRGBTripleToRGB888(pBmp^[j], @lpFaceInfo.Lightmaps[FacePageIndex][k]);
-
-                  Inc(k);
-                  if (k >= lpFaceInfo.LmpSquare) then
-                    begin
-                      k:=0;
-                      Inc(FacePageIndex);
-                    end;
-                  if (FacePageIndex >= lpFaceInfo.CountLightStyles) then
-                    begin
-                      FacePageIndex:=0;
-                      Inc(FaceIndex);
-                      Inc(lpFaceInfo);
-                    end;
-                  while (lpFaceInfo.CountLightStyles = 0) do
-                    begin
-                      Inc(FaceIndex);
-                      Inc(lpFaceInfo);
-                    end;
-                end;
-            end;
-        end;
-      tmpBitmap.Destroy();
-
-      for i:=0 to (Self.Bsp30.CountFaces - 1) do
-        begin
-          lpFaceInfo:=@Self.Bsp30.FaceInfos[i];
-          for j:=0 to (lpFaceInfo.CountLightStyles - 1) do
-            begin
-              CreateLightmapTexture(lpFaceInfo, j);
-            end;
-        end;
-    end;
-
-  Self.isCanRender:=True;
-  Self.Paint();
   {$R+}
 end;
 
 procedure TMainForm.ResetCameraMenuClick(Sender: TObject);
 begin
   {$R-}
-  if (Self.isBspLoad) then
+  if (isBspLoad) then
     begin
-      if (Self.FirstSpawnEntityId >= 1) then
+      if (FirstSpawnEntityId >= 1) then
         begin
           Self.Camera.ResetCamera(
-            Self.Bsp30.Entities[Self.FirstSpawnEntityId].Origin,
-            Self.Bsp30.Entities[Self.FirstSpawnEntityId].Angles.x*AngleToRadian,
-            Self.Bsp30.Entities[Self.FirstSpawnEntityId].Angles.y*AngleToRadian - Pi/2
+            Map.Entities[FirstSpawnEntityId].Origin,
+            Map.Entities[FirstSpawnEntityId].Angles.x*AngleToRadian,
+            Map.Entities[FirstSpawnEntityId].Angles.y*AngleToRadian - Pi/2
           );
         end
       else
@@ -1230,25 +1574,46 @@ begin
   {$R+}
 end;
 
-procedure TMainForm.ShowHeader1Click(Sender: TObject);
+procedure TMainForm.ShowHeaderMenuClick(Sender: TObject);
 begin
   {$R-}
-  if (Self.isBspLoad) then
+  if (isBspLoad) then
     begin
-      ShowMessage(ShowMapHeaderInfo(Self.Bsp30.MapHeader) + LF
-        + 'Entities (with "worldspawn") = ' + IntToStr(Self.Bsp30.CountEntities) + LF
-        + 'Count VisLeafs with PVS = ' + IntToStr(Self.Bsp30.CountVisLeafWithPVS)
+      ShowMessage(ShowMapHeaderInfo(Map.MapHeader) + LF
+        + 'Count textures: ' + IntToStr(Map.TextureLump.nCountTextures) + LF
+        + 'Entities (with "worldspawn"): ' + IntToStr(Map.CountEntities) + LF
+        + 'Count VisLeafs with PVS: ' + IntToStr(Map.CountVisLeafWithPVS) + LF
+        + 'Max count vertecies per Face: ' + IntToStr(Map.MaxVerteciesPerFace) + LF
+        + 'Avg count vertecies per Face: '
+          + FloatToStrF(Map.AvgVerteciesPerFace/Map.CountFaces, ffFixed, 2, 2) + LF
+        + 'Count generated ' + IntToStr(MEGATEXTURE_SIZE) + 'x'
+          + IntToStr(MEGATEXTURE_SIZE) + 'x' + IntToStr(MEGATEXTURE_VOLUME_SIZE)
+          + ' Lightmap 3D Megatextures: '
+          + IntToStr(LightmapMegatexture.CountMegatextures3D)
       );
     end;
   {$R+}
 end;
 
-procedure TMainForm.WireframeWorldBrushesMenuClick(Sender: TObject);
+procedure TMainForm.ShowOpenGLInformationMenuClick(Sender: TObject);
 begin
   {$R-}
-  Self.WireframeWorldBrushesMenu.Checked:=not Self.WireframeWorldBrushesMenu.Checked;
+  ShowMessage(
+    'GL_VERSION: ' + OpenGLVersion + LF +
+    'GL_VENDOR: ' + OpenGLVendor + LF +
+    'GL_RENDERER: ' + OpenGLRenderer + LF +
+    'GL_EXTENSIONS: ' + LF + OpenGLExtArbList
+  );
   {$R+}
 end;
+
+procedure TMainForm.CollisionMenuClick(Sender: TObject);
+begin
+  {$R+}
+  Self.CollisionMenu.Checked:=not Self.CollisionMenu.Checked;
+  {$R-}
+end;
+
 
 procedure TMainForm.WireframeEntBrushesMenuClick(Sender: TObject);
 begin
@@ -1257,59 +1622,17 @@ begin
   {$R+}
 end;
 
-procedure TMainForm.ShowWorldBrushesMenuClick(Sender: TObject);
+procedure TMainForm.WireframeHighlighEntBrushesMenuClick(Sender: TObject);
 begin
   {$R-}
-  Self.ShowWorldBrushesMenu.Checked:=not Self.ShowWorldBrushesMenu.Checked;
-  Self.GetRenderList();
+  Self.WireframeHighlighEntBrushesMenu.Checked:=not Self.WireframeHighlighEntBrushesMenu.Checked;
   {$R+}
 end;
 
-procedure TMainForm.ShowEntBrushesMenuClick(Sender: TObject);
+
+procedure TMainForm.SetSelectedFaceColorMenuClick(Sender: TObject);
 begin
   {$R-}
-  Self.ShowEntBrushesMenu.Checked:=not Self.ShowEntBrushesMenu.Checked;
-  Self.GetRenderList();
-  {$R+}
-end;
-
-procedure TMainForm.WallhackRenderModeMenuClick(Sender: TObject);
-begin
-  {$R-}
-  if (Self.WallhackRenderModeMenu.Checked) then
-    begin
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      Self.WallhackRenderModeMenu.Checked:=False;
-    end
-  else
-    begin
-      glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_COLOR);
-      Self.WallhackRenderModeMenu.Checked:=True;
-    end;
-  {$R+}
-end;
-
-procedure TMainForm.PixelModeMenuClick(Sender: TObject);
-begin
-  {$R-}
-  if (Self.PixelModeMenu.Checked) then
-    begin
-      Self.RenderFaceInfo.FilterMode:=GL_LINEAR;
-      Self.PixelModeMenu.Checked:=False;
-    end
-  else
-    begin
-      Self.RenderFaceInfo.FilterMode:=GL_NEAREST;
-      Self.PixelModeMenu.Checked:=True;
-    end;
-  {$R+}
-end;
-
-procedure TMainForm.SetSelectedFaceColor1Click(Sender: TObject);
-begin
-  {$R-}
-  Self.isCanRender:=False;
-
   Self.ColorDialog.Color:=RGB(
     Round(Self.FaceSelectedColor[0]*255),
     Round(Self.FaceSelectedColor[1]*255),
@@ -1321,40 +1644,171 @@ begin
       Self.FaceSelectedColor[1]:=GetGValue(Self.ColorDialog.Color)*inv255;
       Self.FaceSelectedColor[2]:=GetBValue(Self.ColorDialog.Color)*inv255;
     end;
-  Self.isCanRender:=True;
-  Self.Paint();
   {$R+}
 end;
 
-procedure TMainForm.NoPVSMenuClick(Sender: TObject);
+procedure TMainForm.SetWireframeFaceColorMenuClick(Sender: TObject);
 begin
   {$R-}
-  Self.NoPVSMenu.Checked:= not Self.NoPVSMenu.Checked;
-  if (Self.isBspLoad = False) then Exit;
-
-  Self.SelectedFaceIndex:=-1;
-  if (Assigned(Unit2.FaceToolForm)) then
+  Self.ColorDialog.Color:=RGB(
+    Round(Self.FaceWireframeColor[0]*255),
+    Round(Self.FaceWireframeColor[1]*255),
+    Round(Self.FaceWireframeColor[2]*255)
+  );
+  if (Self.ColorDialog.Execute) then
     begin
-      Unit2.FaceToolForm.UpdateFaceVisualInfo();
+      Self.FaceWireframeColor[0]:=GetRValue(Self.ColorDialog.Color)*inv255;
+      Self.FaceWireframeColor[1]:=GetGValue(Self.ColorDialog.Color)*inv255;
+      Self.FaceWireframeColor[2]:=GetBValue(Self.ColorDialog.Color)*inv255;
     end;
   {$R+}
 end;
 
-procedure TMainForm.RenderBBOXVisLeaf1Click(Sender: TObject);
+procedure TMainForm.RenderBBOXVisLeafClick(Sender: TObject);
 begin
   {$R-}
-  Self.RenderBBOXVisLeaf1.Checked:=not Self.RenderBBOXVisLeaf1.Checked;
+  Self.RenderBBOXVisLeaf.Checked:=not Self.RenderBBOXVisLeaf.Checked;
   {$R+}
 end;
 
 
-procedure TMainForm.ToolFaceMenuClick(Sender: TObject);
+procedure TMainForm.OcclusionMenuClick(Sender: TObject);
 begin
   {$R-}
-  FaceToolForm.Show;
-  FaceToolForm.Update;
+  Self.OcclusionMenu.Checked:=not Self.OcclusionMenu.Checked;
+  if (Self.OcclusionMenu.Checked) then
+    begin
+      FillChar(FacesIndexToRender[0], Map.CountFaces, not RenderFrameIterator);
+      FillChar(BrushIndexToRender[0], Map.CountBrushModels, not RenderFrameIterator);
+    end
+  else
+    begin
+      FillChar(FacesIndexToRender[0], Map.CountFaces, RenderFrameIterator);
+      FillChar(BrushIndexToRender[0], Map.CountBrushModels, RenderFrameIterator);
+    end;
   {$R+}
 end;
+
+
+procedure TMainForm.LmpPixelModeMenuClick(Sender: TObject);
+begin
+  {$R-}
+  LightmapMegatexture.SetFiltrationMode(Self.LmpPixelModeMenu.Checked);
+  Self.LmpPixelModeMenu.Checked:=not Self.LmpPixelModeMenu.Checked;
+  {$R+}
+end;
+
+procedure TMainForm.DisableLightmapsMenuClick(Sender: TObject);
+begin
+  {$R-}
+  Self.DisableLightmapsMenu.Checked:=not Self.DisableLightmapsMenu.Checked;
+  Self.UpdFaceDrawState();
+  {$R+}
+end;
+
+procedure TMainForm.DisableTexturesMenuClick(Sender: TObject);
+begin
+  {$R-}
+  Self.DisableTexturesMenu.Checked:=not Self.DisableTexturesMenu.Checked;
+  Self.UpdFaceDrawState();
+  {$R+}
+end;
+
+
+procedure TMainForm.GotoCamPosSubMenuClick(Sender: TObject);
+var
+  tmpVec3f: tVec3f;
+begin
+  {$R-}
+  if (StrToVec(InputBox('Go to...', 'Position [X Y Z]', '0 0 0'), @tmpVec3f)) then
+    begin
+      Self.Camera.ViewPosition:=tmpVec3f;
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.GotoFaceIdSubmenuClick(Sender: TObject);
+var
+  tmpFaceId: Integer;
+  tmpVec3f: tVec3f;
+begin
+  {$R-}
+  if (Unit1.isBspLoad = False) then Exit;
+
+  tmpFaceId:=StrToIntDef(InputBox('Go to...', 'Face Id', '-1'), -1);
+  if (tmpFaceId >=0) and (tmpFaceId < Map.CountFaces) then
+    begin
+      GetPolyCenter(@Map.FaceExtList[tmpFaceId].Polygon, @tmpVec3f);
+      tmpVec3f.x:=tmpVec3f.x + Map.FaceExtList[tmpFaceId].Polygon.Plane.Normal.x;
+      tmpVec3f.y:=tmpVec3f.y + Map.FaceExtList[tmpFaceId].Polygon.Plane.Normal.y;
+      tmpVec3f.z:=tmpVec3f.z + Map.FaceExtList[tmpFaceId].Polygon.Plane.Normal.z;
+      Self.Camera.ViewPosition:=tmpVec3f;
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.GotoVisLeafIdSubMenuClick(Sender: TObject);
+var
+  tmpVisLeafId: Integer;
+  tmpVec3f: tVec3f;
+begin
+  {$R-}
+  if (Unit1.isBspLoad = False) then Exit;
+
+  tmpVisLeafId:=StrToIntDef(InputBox('Go to...', 'VisLeaf Id', '0'), -1);
+  if (tmpVisLeafId > 0) and (tmpVisLeafId < Map.CountVisLeafWithPVS) then
+    begin
+      GetCenterBBOXf(Map.VisLeafExtList[tmpVisLeafId].BBOXf, @tmpVec3f);
+      Self.Camera.ViewPosition:=tmpVec3f;
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.GotoBModelIdSubMenuClick(Sender: TObject);
+var
+  tmpBModelId: Integer;
+  tmpVec3f: tVec3f;
+begin
+  {$R-}
+  if (Unit1.isBspLoad = False) then Exit;
+
+  tmpBModelId:=StrToIntDef(InputBox('Go to...', 'BModel Id', '0'), -1);
+  if (tmpBModelId >= 0) and (tmpBModelId < Map.CountBrushModels) then
+    begin
+      GetCenterBBOXf(Map.BrushModelExtList[tmpBModelId].BaseBModel.BBOXf, @tmpVec3f);
+      Self.Camera.ViewPosition:=tmpVec3f;
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.GotoEntTGNSubMenuClick(Sender: TObject);
+var
+  tmpTGN: String;
+  EntId: Integer;
+begin
+  {$R-}
+  if (Unit1.isBspLoad = False) then Exit;
+
+  tmpTGN:=InputBox('Go to...', 'Entity targetname', '');
+  if (tmpTGN <> '') then
+    begin
+      EntId:=FindEntityByTargetName(
+        @Map.Entities[0],
+        Map.CountEntities,
+        tmpTGN
+      );
+      if ((EntId > 0) and (EntId < Map.CountEntities)) then
+        begin
+          Self.Camera.ResetCamera(
+            Map.Entities[EntId].Origin,
+            Map.Entities[EntId].Angles.x*AngleToRadian,
+            Map.Entities[EntId].Angles.y*AngleToRadian - Pi/2
+          );
+        end;
+    end;
+  {$R+}
+end;
+
 
 procedure TMainForm.HelpMenuClick(Sender: TObject);
 begin
@@ -1370,44 +1824,31 @@ begin
   {$R+}
 end;
 
-procedure TMainForm.FormShow(Sender: TObject);
+procedure TMainForm.CloseMenuClick(Sender: TObject);
 begin
   {$R-}
-  if (Assigned(FaceToolForm) = False) then
-    begin
-      FaceToolForm:=Unit2.TFaceToolForm.Create(Self);
-    end;
-  FaceToolForm.Show;
-  FaceToolForm.Update;
+  Self.Close();
   {$R+}
 end;
 
-procedure TMainForm.FormHide(Sender: TObject);
-begin
-  {$R-}
-  if (Assigned(FaceToolForm)) then
-    begin
-      FaceToolForm.Hide;
-    end;
-  {$R+}
-end;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   {$R-}
-  glDeleteLists(Self.BaseCubeLeafWireframeList, 1);
-  glDeleteLists(Self.SecondCubeLeafWireframeList, 1);
-  glDeleteLists(Self.StartOrts, 1);
+  glDeleteLists(BaseCubeLeafWireframeList, 1);
+  glDeleteLists(SecondCubeLeafWireframeList, 1);
+  glDeleteLists(StartOrts, 1);
 
-  FreeMapBSP(@Self.Bsp30);
-  SetLength(Self.FacesIndexToRender, 0);
-  SetLength(Self.BrushIndexToRender, 0);
-  SetLength(Self.LeafIndexToRender, 0);
+  FreeMapBSP(@Map);
+  LightmapMegatexture.DeleteManager();
+  BasetextureMng.DeleteManager();
+  BaseThumbnailBMP.Destroy();
 
   Self.Camera.DeleteCamera();
-  Self.RayTracer.DeleteRayTracer();
-  Self.VSyncManager.DeleteVSyncManager();
-  wglDeleteContext(Self.HRC);
+  Self.RenderTimer.DeleteManager();
+
+  Self.RenderContext.DeleteRenderingContext();
+  Self.RenderContext.DeleteManager();
   {$R+}
 end;
 

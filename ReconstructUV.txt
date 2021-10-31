@@ -1,0 +1,62 @@
+s = Dot(vS, V) + fS;
+t = Dot(vT, V) + fT;
+
+vS, vT - ?
+
+vS = (vSx, vSy, vSz);
+vT = (vTx, vTy, vTz);
+ V = ( Vx,  Vy,  Vz);
+
+vSx*Vx + vSy*Vy + vSz*Vz = s - fS;
+vTx*Vx + vTy*Vy + vTz*Vz = t - fT;
+
+// two Linear Systems 3x3:
+vSx*Vx0 + vSy*Vy0 + vSz*Vz0 = s0 - fS;
+vSx*Vx1 + vSy*Vy1 + vSz*Vz1 = s1 - fS;
+vSx*Vx2 + vSy*Vy2 + vSz*Vz2 = s2 - fS;
+
+vTx*Vx0 + vTy*Vy0 + vTz*Vz0 = t0 - fT;
+vTx*Vx1 + vTy*Vy1 + vTz*Vz1 = t1 - fT;
+vTx*Vx2 + vTy*Vy2 + vTz*Vz2 = t2 - fT;
+
+// matrix mode:
+
+		V*vS = Bs;
+		V*vT = Bt;
+
+     [Vx0  Vy0  Vz0]        [ vSx ]        [ vTx ]
+ V = [Vx1  Vy1  Vz1];  vS = [ vSy ];  vT = [ vTy ];
+     [Vx2  Vy2  Vz2]        [ vSz ]        [ vTz ]
+      
+			[ s0 - fS ]        [ t0 - fT ]
+ Bs = [ s1 - fS ];  Bt = [ t1 - fT ];
+      [ s2 - fS ]        [ t2 - fT ]
+
+ [Vx0  Vy0  Vz0]   [ vSx ]   [ s0 - fS ]
+ [Vx1  Vy1  Vz1] * [ vSy ] = [ s1 - fS ]
+ [Vx2  Vy2  Vz2]   [ vSz ]   [ s2 - fS ] 
+ 
+ [Vx0  Vy0  Vz0]   [ vTx ]   [ t0 - fT ]
+ [Vx1  Vy1  Vz1] * [ vTy ] = [ t1 - fT ]
+ [Vx2  Vy2  Vz2]   [ vTz ]   [ t2 - fT ] 
+
+ 
+// more optimal way with minimaze divisions (and errors) - Kramer Method
+
+defined determinators: detV, detX, detY, detZ:
+	detV is determinante of matrix V;
+	detX is determinator of matrix V where first Colum replaced by Bs; 
+	detY is determinator of matrix V where second Colum replaced by Bs; 
+	detZ is determinator of matrix V where third Colum replaced by Bs; 
+
+Then solution if vS: vSx = detX/detV; vSy = detY/detV; vSz = detZ/detV;
+(equivalent way to get vT, where Bs replacet by Bt);
+
+
+
+
+
+
+
+
+
