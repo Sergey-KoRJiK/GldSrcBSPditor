@@ -3,9 +3,6 @@ e-mail: sergeysmol4444@yandex.ru
 
 # This program created for Edit Lightmaps of GldSrc BSP. 
 Support import and export Lightmap textures on Face to Bitmap for each Styles on Face. 
-
-### For download pre-release 1.2.0 compiled standalone tool, click [here](https://github.com/Sergey-KoRJiK/GldSrcBSPditor/raw/master/GoldSrcViewer.exe)
-
 Requirements: OpenGL 1.3+; CPU x86 + FPU x87; ~128MB RAM; ~32MB GPU RAM; Win 2000 or great;
 
 The main goal - Color\Pixel Correction of calculated light after light compiler
