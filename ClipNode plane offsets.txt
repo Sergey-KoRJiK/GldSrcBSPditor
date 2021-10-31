@@ -1,4 +1,4 @@
-https://github.com/ValveSoftware/halflife/blob/master/utils/qcsg/brush.c#326
+https://github.com/ValveSoftware/halflife/blob/master/utils/qcsg/brush.c#L326
 
 vec3_t	hull_size[NUM_HULLS][2] = {
 { {0, 0, 0}, {0, 0, 0} },
