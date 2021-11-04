@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 334
-  Top = 54
+  Left = 513
+  Top = 152
   Width = 791
   Height = 644
   Caption = 'MainForm'
@@ -77,7 +77,7 @@ object MainForm: TMainForm
     Left = 592
     Top = 0
     Width = 177
-    Height = 545
+    Height = 585
     BevelOuter = bvNone
     Ctl3D = False
     ParentColor = True
@@ -85,7 +85,7 @@ object MainForm: TMainForm
     TabOrder = 1
     object RadioGroupLmp: TRadioGroup
       Left = 0
-      Top = 464
+      Top = 496
       Width = 177
       Height = 57
       Caption = ' Save\Load Lightmaps '
@@ -100,7 +100,7 @@ object MainForm: TMainForm
     end
     object ButtonSaveLmp: TButton
       Left = 89
-      Top = 522
+      Top = 554
       Width = 88
       Height = 22
       Caption = 'Save'
@@ -109,7 +109,7 @@ object MainForm: TMainForm
     end
     object ButtonLoadLmp: TButton
       Left = 1
-      Top = 522
+      Top = 554
       Width = 88
       Height = 22
       Caption = 'Load'
@@ -314,7 +314,7 @@ object MainForm: TMainForm
       Left = 0
       Top = 128
       Width = 177
-      Height = 221
+      Height = 265
       Caption = 'Selected Texture '
       Font.Charset = ANSI_CHARSET
       Font.Color = clGray
@@ -325,7 +325,7 @@ object MainForm: TMainForm
       TabOrder = 4
       object ImagePreviewBT: TImage
         Tag = 4
-        Left = 24
+        Left = 40
         Top = 84
         Width = 128
         Height = 128
@@ -442,10 +442,94 @@ object MainForm: TMainForm
         ParentFont = False
         TabOrder = 5
       end
+      object ButtonLoadTex: TButton
+        Left = 1
+        Top = 219
+        Width = 88
+        Height = 22
+        Caption = 'Load'
+        TabOrder = 6
+        OnClick = ButtonLoadTexClick
+      end
+      object ButtonSaveTex: TButton
+        Left = 89
+        Top = 219
+        Width = 88
+        Height = 22
+        Caption = 'Save'
+        TabOrder = 7
+        OnClick = ButtonSaveTexClick
+      end
+      object ButtonTexRebuildMips: TButton
+        Left = 25
+        Top = 243
+        Width = 128
+        Height = 22
+        Caption = 'Rebuild MipMaps'
+        Enabled = False
+        TabOrder = 8
+        OnClick = ButtonTexRebuildMipsClick
+      end
+      object RadioButtonMip0: TRadioButton
+        Left = 8
+        Top = 112
+        Width = 25
+        Height = 17
+        Caption = '1'
+        Checked = True
+        TabOrder = 9
+        TabStop = True
+        OnClick = RadioButtonMip0Click
+      end
+      object RadioButtonMip1: TRadioButton
+        Left = 8
+        Top = 136
+        Width = 25
+        Height = 17
+        Caption = '2'
+        TabOrder = 10
+        OnClick = RadioButtonMip1Click
+      end
+      object RadioButtonMip2: TRadioButton
+        Left = 8
+        Top = 160
+        Width = 25
+        Height = 17
+        Caption = '3'
+        TabOrder = 11
+        OnClick = RadioButtonMip2Click
+      end
+      object RadioButtonMip3: TRadioButton
+        Left = 8
+        Top = 184
+        Width = 25
+        Height = 17
+        Caption = '4'
+        TabOrder = 12
+        OnClick = RadioButtonMip3Click
+      end
+      object StaticText1: TStaticText
+        Left = 0
+        Top = 84
+        Width = 41
+        Height = 21
+        AutoSize = False
+        BevelInner = bvNone
+        BevelOuter = bvNone
+        BorderStyle = sbsSingle
+        Caption = ' Level'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clGray
+        Font.Height = -13
+        Font.Name = 'Script'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 13
+      end
     end
     object GroupBoxLightmapInfo: TGroupBox
       Left = 0
-      Top = 354
+      Top = 394
       Width = 177
       Height = 101
       Caption = ' Selected Lightmap '
@@ -693,6 +777,10 @@ object MainForm: TMainForm
           Caption = 'Pixelate Lightmaps'
           OnClick = LmpPixelModeMenuClick
         end
+        object TexPixelModeMenu: TMenuItem
+          Caption = 'Pixelate Texture'
+          OnClick = TexPixelModeMenuClick
+        end
         object DisableLightmapsMenu: TMenuItem
           Caption = 'Disable Lightmaps'
           OnClick = DisableLightmapsMenuClick
@@ -700,6 +788,22 @@ object MainForm: TMainForm
         object DisableTexturesMenu: TMenuItem
           Caption = 'Disable Textures'
           OnClick = DisableTexturesMenuClick
+        end
+        object LmpOverBrightMenu: TMenuItem
+          Caption = 'Lightmap Overbright'
+          object LmpOverBright1Menu: TMenuItem
+            Caption = '1.0'
+            Checked = True
+            OnClick = LmpOverBright1MenuClick
+          end
+          object LmpOverBright2Menu: TMenuItem
+            Caption = '2.0'
+            OnClick = LmpOverBright2MenuClick
+          end
+          object LmpOverBright4Menu: TMenuItem
+            Caption = '4.0'
+            OnClick = LmpOverBright4MenuClick
+          end
         end
       end
       object FaceCullingMenu: TMenuItem
@@ -742,6 +846,7 @@ object MainForm: TMainForm
     Top = 8
   end
   object SaveDialogBsp: TSaveDialog
+    DefaultExt = 'bsp'
     Filter = 'Gold Src Bsp v30|*.bsp'
     Left = 72
     Top = 8
@@ -751,12 +856,13 @@ object MainForm: TMainForm
     Top = 8
   end
   object OpenDialogBMP: TOpenDialog
-    Filter = 'Bitmap 24-bit|*.bmp'
+    Filter = 'Bitmap |*.bmp'
     Left = 40
     Top = 40
   end
   object SaveDialogBMP: TSaveDialog
-    Filter = 'Bitmap 24-bit|*.bmp'
+    DefaultExt = 'bmp'
+    Filter = 'Bitmap |*.bmp'
     Left = 72
     Top = 40
   end

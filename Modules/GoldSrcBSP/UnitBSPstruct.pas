@@ -159,11 +159,10 @@ begin
   Map.CountPlanes:=0;
   SetLength(Map.PlaneLump, 0);
 
-  Setlength(Map.TextureLump.MipTexInfos, 0);
-  SetLength(Map.TextureLump.OffsetsToMipTex, 0);
+  SetLength(Map.TextureLump.OffsetsToTexture, 0);
   for i:=0 to (Map.TextureLump.nCountTextures - 1) do
     begin
-      FreeTexture(Map.TextureLump.Wad3Textures[i]);
+      FreeTextureAndPalette(Map.TextureLump.Wad3Textures[i]);
     end;
   SetLength(Map.TextureLump.Wad3Textures, 0);
   Map.TextureLump.nCountTextures:=0;
@@ -248,7 +247,7 @@ procedure SaveBSP30ToFile(const FileName: String; const Map: PMapBSP);
 const
   PaddingByte: Byte = 0;
 var
-  i, j, k: Integer;
+  i, j: Integer;
   CurrentFileOffset: Integer;
   MapFile: File;
   //
@@ -316,7 +315,7 @@ begin
   // Save TexInfo lump
   Seek(MapFile, CurrentFileOffset);
   Map.MapHeader.LumpsInfo[LUMP_TEXINFO].nOffset:=CurrentFileOffset;
-  Map.MapHeader.LumpsInfo[LUMP_TEXINFO].nLength:=Map.CountTexInfos*SizeOf(tMipTex);
+  Map.MapHeader.LumpsInfo[LUMP_TEXINFO].nLength:=Map.CountTexInfos*SizeOf(tTexInfo);
   //
   BlockWrite(MapFile, (@Map.TexInfoLump[0])^, Map.MapHeader.LumpsInfo[LUMP_TEXINFO].nLength);
   Inc(CurrentFileOffset, Map.MapHeader.LumpsInfo[LUMP_TEXINFO].nLength);
@@ -331,7 +330,7 @@ begin
       Inc(Map.CountPackedLightmaps, Map.FaceExtList[i].CountLightmaps);
     end;
   SetLength(Map.LightingLump, Map.CountPackedLightmaps);
-  k:=0; // Current lightmap offset in LightingLump array
+  j:=0; // Current lightmap offset in LightingLump array
   for i:=0 to (Map.CountFaces - 1) do
     begin
       if (Map.FaceExtList[i].isDummyLightmaps) then
@@ -340,14 +339,14 @@ begin
           Continue;
         end;
       //
-      Map.FaceExtList[i].BaseFace.nLightmapOffset:=k*SizeOf(tRGB888);
+      Map.FaceExtList[i].BaseFace.nLightmapOffset:=j*SizeOf(tRGB888);
       CopyBytes(
         @Map.FaceExtList[i].Lightmaps[0],
-        @Map.LightingLump[k],
+        @Map.LightingLump[j],
         Map.FaceExtList[i].CountLightmaps*SizeOf(tRGB888)
       );
       //
-      Inc(k, Map.FaceExtList[i].CountLightmaps);
+      Inc(j, Map.FaceExtList[i].CountLightmaps);
     end;
 
   // Save Face Lump
@@ -385,11 +384,11 @@ begin
   Inc(CurrentFileOffset, Map.MapHeader.LumpsInfo[LUMP_MARKSURFACES].nLength);
   // SizeOfMarkSurface = 2 bytes, don't multiple by 4, need add padding
   //
-  k:=0; // use this variable as padding fill value
+  j:=0; // use this variable as padding fill value
   if ((Map.MapHeader.LumpsInfo[LUMP_MARKSURFACES].nLength mod 4) <> 0) then
     begin
       Seek(MapFile, CurrentFileOffset);
-      BlockWrite(MapFile, (@k)^, 2);
+      BlockWrite(MapFile, (@j)^, 2);
       Inc(CurrentFileOffset, 2);
     end;
 
@@ -437,12 +436,12 @@ begin
   //
   // SizeOfRGB888 = 3 bytes, don't multiple by 4, need add padding
   //
-  k:=0; // use this variable as padding fill value
+  j:=0; // use this variable as padding fill value
   i:=(Map.MapHeader.LumpsInfo[LUMP_LIGHTING].nLength mod 4);
   if (i <> 0) then
     begin
       Seek(MapFile, CurrentFileOffset);
-      BlockWrite(MapFile, (@k)^, 4 - i);
+      BlockWrite(MapFile, (@j)^, 4 - i);
       Inc(CurrentFileOffset, 4 - i);
     end;
 
@@ -457,12 +456,12 @@ begin
   //
   // PVS is bytes array, don't multiple by 4, need add padding
   //
-  k:=0; // use this variable as padding fill value
+  j:=0; // use this variable as padding fill value
   i:=(Map.SizePackedVisibility mod 4);
   if (i <> 0) then
     begin
       Seek(MapFile, CurrentFileOffset);
-      BlockWrite(MapFile, (@k)^, 4 - i);
+      BlockWrite(MapFile, (@j)^, 4 - i);
       Inc(CurrentFileOffset, 4 - i);
     end;
 
@@ -477,12 +476,12 @@ begin
   //
   // EntData is bytes array, don't multiple by 4, need add padding
   //
-  k:=0; // use this variable as padding fill value
+  j:=0; // use this variable as padding fill value
   i:=(Map.SizeEndData mod 4);
   if (i <> 0) then
     begin
       Seek(MapFile, CurrentFileOffset);
-      BlockWrite(MapFile, (@k)^, 4 - i);
+      BlockWrite(MapFile, (@j)^, 4 - i);
       Inc(CurrentFileOffset, 4 - i);
     end;
 
@@ -491,58 +490,51 @@ begin
   Seek(MapFile, CurrentFileOffset);
   Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nOffset:=CurrentFileOffset;
   //
+  ZeroFillDWORD(@Map.TextureLump.OffsetsToTexture[0], Map.TextureLump.nCountTextures*SizeOf(Integer));
   BlockWrite(MapFile, Map.TextureLump.nCountTextures, SizeOf(Integer));
-  BlockWrite(MapFile, (@Map.TextureLump.OffsetsToMipTex[0])^, Map.TextureLump.nCountTextures*SizeOf(Integer));
+  BlockWrite(MapFile, (@Map.TextureLump.OffsetsToTexture[0])^,
+    Map.TextureLump.nCountTextures*SizeOf(Integer)
+  ); // first dummy write
 
-  // Save MipTex
+  // Save Textures
   for i:=0 to (Map.TextureLump.nCountTextures - 1) do
     begin
-      Seek(MapFile, CurrentFileOffset + Map.TextureLump.OffsetsToMipTex[i]);
-      BlockWrite(MapFile, (@Map.TextureLump.MipTexInfos[i])^, SizeOf(tMipTex));
+      Map.TextureLump.OffsetsToTexture[i]:=FileSize(MapFile) - CurrentFileOffset;
+      BlockWrite(MapFile, (@Map.TextureLump.Wad3Textures[i])^, MIPTEX_SIZE);
+
+      if (Map.TextureLump.Wad3Textures[i].nOffsets[0] = MIPTEX_SIZE) then
+        begin
+          // Save Pixel-Index Data
+          BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[0])^, Map.TextureLump.Wad3Textures[i].MipSize[0]);
+          BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[1])^, Map.TextureLump.Wad3Textures[i].MipSize[1]);
+          BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[2])^, Map.TextureLump.Wad3Textures[i].MipSize[2]);
+          BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[3])^, Map.TextureLump.Wad3Textures[i].MipSize[3]);
+          // Save Palette
+          BlockWrite(MapFile, (@Map.TextureLump.Wad3Textures[i].PaletteColors)^, SizeOf(Word));
+          BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].Palette)^,
+            Map.TextureLump.Wad3Textures[i].PaletteColors*SizeOf(tRGB888));
+          // Add padding
+          BlockWrite(MapFile, (@Map.TextureLump.Wad3Textures[i].Padding)^, SizeOf(Word));
+        end;
     end;
-
-  // Save PixelData
-  for i:=0 to (Map.TextureLump.nCountTextures - 1) do
-    begin
-      if (Map.TextureLump.MipTexInfos[i].nOffsets[0] <= 0) then Continue;
-      j:=CurrentFileOffset + Map.TextureLump.OffsetsToMipTex[i];
-
-      // Save Mip0
-      Seek(MapFile, j + Map.TextureLump.MipTexInfos[i].nOffsets[0]);
-      BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[0])^, Map.TextureLump.Wad3Textures[i].MipSize[0]);
-
-      // Save Mip1
-      Seek(MapFile, j + Map.TextureLump.MipTexInfos[i].nOffsets[1]);
-      BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[1])^, Map.TextureLump.Wad3Textures[i].MipSize[1]);
-
-      // Save Mip2
-      Seek(MapFile, j + Map.TextureLump.MipTexInfos[i].nOffsets[2]);
-      BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[2])^, Map.TextureLump.Wad3Textures[i].MipSize[2]);
-
-      // Save Mip3
-      Seek(MapFile, j + Map.TextureLump.MipTexInfos[i].nOffsets[3]);
-      BlockWrite(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[3])^, Map.TextureLump.Wad3Textures[i].MipSize[3]);
-      
-      // Save Palette
-      Seek(MapFile, j + Map.TextureLump.MipTexInfos[i].nOffsets[3] + Map.TextureLump.Wad3Textures[i].MipSize[3]);
-      BlockWrite(MapFile, (@Map.TextureLump.Wad3Textures[i].RawPadding)^, SizeOf(Word));
-      Seek(MapFile, j + Map.TextureLump.MipTexInfos[i].nOffsets[3] + Map.TextureLump.Wad3Textures[i].MipSize[3] + 2);
-      BlockWrite(MapFile, (@Map.TextureLump.Wad3Textures[i].Palette[0])^, PALETTE_SIZE);
-    end;
-  k:=FileSize(MapFile);
-  Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nLength:=k - CurrentFileOffset;
+  Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nLength:=FileSize(MapFile) - CurrentFileOffset;
+  //
+  Seek(MapFile, CurrentFileOffset + SizeOf(Integer));
+  BlockWrite(MapFile, (@Map.TextureLump.OffsetsToTexture[0])^,
+    Map.TextureLump.nCountTextures*SizeOf(Integer)
+  );
 
   // Save Map Header
   Seek(MapFile, 0);
   BlockWrite(MapFile, Map.MapHeader, MAP_HEADER_SIZE);
   
   // Make file size multiple by 4
-  k:=0; // use this variable as padding fill value
+  j:=0; // use this variable as padding fill value
   i:=(FileSize(MapFile) mod 4);
   if (i <> 0) then
     begin
       Seek(MapFile, FileSize(MapFile));
-      BlockWrite(MapFile, (@k)^, 4 - i);
+      BlockWrite(MapFile, (@j)^, 4 - i);
     end;
 
   CloseFile(MapFile);
@@ -551,7 +543,7 @@ end;
 
 function LoadBSP30FromFile(const FileName: String; const Map: PMapBSP): boolean;
 var
-  i, j, k, MapFileSize: Integer;
+  i, MapFileSize: Integer;
   MapFile: File;
   tmpList: TStringList;
   tmpEntityLump: String;
@@ -596,7 +588,7 @@ begin
   Map.CountVertices:=         Map.MapHeader.LumpsInfo[LUMP_VERTICES].nLength div SizeOf(tVec3f);
   Map.SizePackedVisibility:=  Map.MapHeader.LumpsInfo[LUMP_VISIBILITY].nLength;
   Map.CountNodes:=            Map.MapHeader.LumpsInfo[LUMP_NODES].nLength div SizeOf(tNode);
-  Map.CountTexInfos:=         Map.MapHeader.LumpsInfo[LUMP_TEXINFO].nLength div SizeOf(tMipTex);
+  Map.CountTexInfos:=         Map.MapHeader.LumpsInfo[LUMP_TEXINFO].nLength div SizeOf(tTexInfo);
   Map.CountFaces:=            Map.MapHeader.LumpsInfo[LUMP_FACES].nLength div SizeOf(tFace);
   Map.CountPackedLightmaps:=  Map.MapHeader.LumpsInfo[LUMP_LIGHTING].nLength div SizeOf(tRGB888);
   Map.CountLeafs:=            Map.MapHeader.LumpsInfo[LUMP_LEAVES].nLength div SizeOf(tVisLeaf);
@@ -659,59 +651,33 @@ begin
       Seek(MapFile, Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nOffset);
       BlockRead(MapFile, Map.TextureLump.nCountTextures, SizeOf(Integer));
       //
-      SetLength(Map.TextureLump.OffsetsToMipTex, Map.TextureLump.nCountTextures);
-      BlockRead(MapFile, (@Map.TextureLump.OffsetsToMipTex[0])^, Map.TextureLump.nCountTextures*SizeOf(Integer));
+      SetLength(Map.TextureLump.OffsetsToTexture, Map.TextureLump.nCountTextures);
+      BlockRead(MapFile, (@Map.TextureLump.OffsetsToTexture[0])^, Map.TextureLump.nCountTextures*SizeOf(Integer));
       //
-      SetLength(Map.TextureLump.MipTexInfos, Map.TextureLump.nCountTextures);
-      j:=Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nOffset;
-
-      // Read MipTex
-      for i:=0 to (Map.TextureLump.nCountTextures - 1) do
-        begin
-          if (Map.TextureLump.OffsetsToMipTex[i] >= 0) then
-            begin
-              Seek(MapFile, j + Map.TextureLump.OffsetsToMipTex[i]);
-              BlockRead(MapFile, (@Map.TextureLump.MipTexInfos[i])^, SizeOf(tMipTex));
-            end
-          else
-            begin
-              Map.TextureLump.MipTexInfos[i]:=MIPTEX_NULL;
-            end;
-        end;
-
       SetLength(Map.TextureLump.Wad3Textures, Map.TextureLump.nCountTextures);
-      // Read PixelData
+
       for i:=0 to (Map.TextureLump.nCountTextures - 1) do
         begin
-          Map.TextureLump.MipTexInfos[i].szName[15]:=#0; // just protect ourselves
-          Map.TextureLump.Wad3Textures[i].Name:=@Map.TextureLump.MipTexInfos[i].szName[0];
+          BlockRead(MapFile, (@Map.TextureLump.Wad3Textures[i])^, MIPTEX_SIZE);
+          Map.TextureLump.Wad3Textures[i].szName[15]:=#0; // just protect ourselves
 
           Map.TextureLump.Wad3Textures[i].MipData[0]:=nil;
-          if (Map.TextureLump.MipTexInfos[i].nOffsets[0] <= 0) then continue;
-          k:=j + Map.TextureLump.OffsetsToMipTex[i];
-          AllocTexture(Map.TextureLump.MipTexInfos[i], Map.TextureLump.Wad3Textures[i]);
-
-          // Read Mip0
-          Seek(MapFile, k + Map.TextureLump.MipTexInfos[i].nOffsets[0]);
-          BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[0])^, Map.TextureLump.Wad3Textures[i].MipSize[0]);
-
-          // Read Mip1
-          Seek(MapFile, k + Map.TextureLump.MipTexInfos[i].nOffsets[1]);
-          BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[1])^, Map.TextureLump.Wad3Textures[i].MipSize[1]);
-
-          // Read Mip2
-          Seek(MapFile, k + Map.TextureLump.MipTexInfos[i].nOffsets[2]);
-          BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[2])^, Map.TextureLump.Wad3Textures[i].MipSize[2]);
-
-          // Read Mip3
-          Seek(MapFile, k + Map.TextureLump.MipTexInfos[i].nOffsets[3]);
-          BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[3])^, Map.TextureLump.Wad3Textures[i].MipSize[3]);
-
-          // Read Palette
-          Seek(MapFile, k + Map.TextureLump.MipTexInfos[i].nOffsets[3] + Map.TextureLump.Wad3Textures[i].MipSize[3]);
-          BlockRead(MapFile, (@Map.TextureLump.Wad3Textures[i].RawPadding)^, SizeOf(Word));
-          Seek(MapFile, k + Map.TextureLump.MipTexInfos[i].nOffsets[3] + Map.TextureLump.Wad3Textures[i].MipSize[3] + 2);
-          BlockRead(MapFile, (@Map.TextureLump.Wad3Textures[i].Palette[0])^, PALETTE_SIZE);
+          if (Map.TextureLump.Wad3Textures[i].nOffsets[0] = MIPTEX_SIZE) then
+            begin
+              AllocTexture(Map.TextureLump.Wad3Textures[i]);
+              // Read Pixel-Index Data
+              BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[0])^, Map.TextureLump.Wad3Textures[i].MipSize[0]);
+              BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[1])^, Map.TextureLump.Wad3Textures[i].MipSize[1]);
+              BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[2])^, Map.TextureLump.Wad3Textures[i].MipSize[2]);
+              BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].MipData[3])^, Map.TextureLump.Wad3Textures[i].MipSize[3]);
+              // Read Palette
+              BlockRead(MapFile, (@Map.TextureLump.Wad3Textures[i].PaletteColors)^, SizeOf(Word));
+              AllocPalette(Map.TextureLump.Wad3Textures[i]);
+              BlockRead(MapFile, (Map.TextureLump.Wad3Textures[i].Palette)^,
+                Map.TextureLump.Wad3Textures[i].PaletteColors*SizeOf(tRGB888));
+              // Read Padding
+              BlockRead(MapFile, (@Map.TextureLump.Wad3Textures[i].Padding)^, SizeOf(Word));
+            end;
         end;
     end
   else
@@ -1005,7 +971,7 @@ begin
 
   lpTexInfo:=@Map.TexInfoLump[lpFaceExt.BaseFace.iTextureInfo];
   lpFaceExt.Wad3TextureIndex:=lpTexInfo.iMipTex;
-  lpFaceExt.TexName:=Map.TextureLump.Wad3Textures[lpFaceExt.Wad3TextureIndex].Name;
+  lpFaceExt.TexName:=@Map.TextureLump.Wad3Textures[lpFaceExt.Wad3TextureIndex].szName;
 
   lpFaceExt.PlaneIndex:=lpFaceExt.BaseFace.iPlane;
   lpFaceExt.PlaneAxisType:=Map.PlaneLump[lpFaceExt.PlaneIndex].AxisType;
@@ -1088,8 +1054,8 @@ begin
   lpFaceExt.CountLightmaps:=lpFaceExt.LmpSquare*lpFaceExt.CountLightStyles;
 
   // Normalize texture coordinatex and compute lightmap coordinates
-  w:=Map.TextureLump.Wad3Textures[lpFaceExt.Wad3TextureIndex].MipWidth[0];
-  h:=Map.TextureLump.Wad3Textures[lpFaceExt.Wad3TextureIndex].MipHeight[0];
+  w:=Map.TextureLump.Wad3Textures[lpFaceExt.Wad3TextureIndex].nWidth;
+  h:=Map.TextureLump.Wad3Textures[lpFaceExt.Wad3TextureIndex].nHeight;
   for i:=0 to (lpFaceExt.Polygon.CountVertecies - 1) do
     begin
       lpFaceExt.LmpCoords[i].x:=(lpFaceExt.TexCoords[i].x*inv16 - LmpMin.X + 0.5);

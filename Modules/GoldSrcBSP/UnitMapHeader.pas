@@ -98,7 +98,7 @@ begin
       '# VERTICES      #' + ShowElement(LumpsInfo[LUMP_VERTICES], SizeOf(tVec3f)) +
       '# VISIBILITY    #' + ShowElement(LumpsInfo[LUMP_VISIBILITY], 0) +
       '# NODES         #' + ShowElement(LumpsInfo[LUMP_NODES], SizeOf(tNode)) +
-      '# TEXINFO       #' + ShowElement(LumpsInfo[LUMP_TEXINFO], SizeOf(tMipTex)) +
+      '# TEXINFO       #' + ShowElement(LumpsInfo[LUMP_TEXINFO], SizeOf(tTexInfo)) +
       '# FACES         #' + ShowElement(LumpsInfo[LUMP_FACES], SizeOf(tFace)) +
       '# LIGHTING      #' + ShowElement(LumpsInfo[LUMP_LIGHTING], SizeOf(tRGB888)) +
       '# CLIP NODES    #' + ShowElement(LumpsInfo[LUMP_CLIPNODES], SizeOf(tClipNode)) +

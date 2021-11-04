@@ -126,6 +126,19 @@ type
     GotoBModelIdSubMenu: TMenuItem;
     GotoEntTGNSubMenu: TMenuItem;
     CollisionMenu: TMenuItem;
+    ButtonLoadTex: TButton;
+    ButtonSaveTex: TButton;
+    ButtonTexRebuildMips: TButton;
+    TexPixelModeMenu: TMenuItem;
+    LmpOverBrightMenu: TMenuItem;
+    LmpOverBright1Menu: TMenuItem;
+    LmpOverBright2Menu: TMenuItem;
+    LmpOverBright4Menu: TMenuItem;
+    RadioButtonMip0: TRadioButton;
+    RadioButtonMip1: TRadioButton;
+    RadioButtonMip2: TRadioButton;
+    RadioButtonMip3: TRadioButton;
+    StaticText1: TStaticText;
     function TestRequarementExtensions(): Boolean;
     procedure InitGL();
     procedure GetVisleafRenderList();
@@ -180,6 +193,17 @@ type
     procedure GotoBModelIdSubMenuClick(Sender: TObject);
     procedure GotoEntTGNSubMenuClick(Sender: TObject);
     procedure CollisionMenuClick(Sender: TObject);
+    procedure ButtonLoadTexClick(Sender: TObject);
+    procedure ButtonSaveTexClick(Sender: TObject);
+    procedure ButtonTexRebuildMipsClick(Sender: TObject);
+    procedure TexPixelModeMenuClick(Sender: TObject);
+    procedure LmpOverBright1MenuClick(Sender: TObject);
+    procedure LmpOverBright2MenuClick(Sender: TObject);
+    procedure LmpOverBright4MenuClick(Sender: TObject);
+    procedure RadioButtonMip0Click(Sender: TObject);
+    procedure RadioButtonMip1Click(Sender: TObject);
+    procedure RadioButtonMip2Click(Sender: TObject);
+    procedure RadioButtonMip3Click(Sender: TObject);
   private
     RenderContext: CRenderingContextManager;
     RenderTimer: CRenderTimerManager;
@@ -257,6 +281,7 @@ var
   // Lightmap Face options
   SelectedFaceIndex: Integer = -1;
   SelectedStyle: Integer = 0;
+  SelectedMipmap: Integer = 0;
   CurrFaceExt: PFaceExt = nil;
   //
   LightmapMegatexture: CMegatextureManager;
@@ -374,6 +399,46 @@ begin
   Self.PanelRTResize(Sender);
   Self.RenderTimer:=CRenderTimerManager.CreateManager();
   Application.OnIdle:=Self.Idle;
+
+  if (ParamCount = 1) then
+    begin
+      isBspLoad:=LoadBSP30FromFile(ParamStr(1), @Map);
+      if (isBspLoad = False) then
+        begin
+          ShowMessage('Error load Map: ' + LF
+            + ShowLoadBSPMapError(Map.LoadState)
+          );
+          FreeMapBSP(@Map);
+        end
+      else
+        begin
+          Self.LoadMapMenu.Enabled:=False;
+          Self.CloseMapMenu.Enabled:=True;
+          Self.SaveMapMenu.Enabled:=True;
+          Self.GotoFaceIdSubmenu.Enabled:=True;
+          Self.GotoVisLeafIdSubMenu.Enabled:=True;
+          Self.GotoBModelIdSubMenu.Enabled:=True;
+          Self.GotoEntTGNSubMenu.Enabled:=True;
+          Self.Caption:=ParamStr(1);
+
+          FirstSpawnEntityId:=FindFirstSpawnEntity(@Map.Entities[0], Map.CountEntities);
+          if (FirstSpawnEntityId >= 1) then
+            begin
+              Self.Camera.ResetCamera(
+                Map.Entities[FirstSpawnEntityId].Origin,
+                Map.Entities[FirstSpawnEntityId].Angles.x*AngleToRadian,
+                Map.Entities[FirstSpawnEntityId].Angles.y*AngleToRadian - Pi/2
+              );
+            end;
+
+          FillChar(FacesIndexToRender[0], Map.CountFaces, not RenderFrameIterator);
+          FillChar(LeafIndexToRender[0], Map.CountVisLeafWithPVS, not RenderFrameIterator);
+          FillChar(BrushIndexToRender[0], Map.CountBrushModels, not RenderFrameIterator);
+
+          Self.GenerateBasetextures();
+          Self.GenerateLightmapMegatexture();
+        end;
+    end;
   {$R+}
 end;
 
@@ -445,8 +510,6 @@ end;
 procedure TMainForm.InitGL();
 begin
   {$R-}
-  glEnable(GL_TEXTURE_2D);  // Enable 2D Textures
-  glEnable(GL_TEXTURE_3D);  // Enable 2D Textures
   glEnable(GL_DEPTH_TEST);  // Enable Depth Buffer
   glEnable(GL_CULL_FACE); // Enable Face Normal Test
   glCullFace(GL_FRONT); // which Face side render, Front or Back
@@ -868,6 +931,10 @@ begin
       if (Map.FaceExtList[i].TexRenderId < 0) then
         begin
           Map.FaceExtList[i].TexRenderId:=BASETEXTURE_DUMMY_ID;
+        end
+      else
+        begin
+          Map.FaceExtList[i].isDummyTexture:=False;
         end;
     end;
 
@@ -915,6 +982,8 @@ begin
       LightmapMegatexture.UnbindMegatexture3D();
       BasetextureMng.UnbindBasetexture();
       //
+      glDisable(GL_BLEND);
+      glAlphaFunc(GL_GEQUAL, 0.5);
       case (Self.FaceDrawState) of
         FACEDRAW_ALL:
           begin
@@ -1017,6 +1086,8 @@ begin
 
           end;
       end;
+      glEnable(GL_BLEND);
+      glAlphaFunc(GL_GEQUAL, 0.1);
       //////////////////////////////////////////////////////////////////////////}
 
       // Render Highlight Wireframe for EntBrush Faces
@@ -1269,9 +1340,9 @@ begin
 
   Self.EditTexName.Caption:=' ' + PAnsiChar(CurrFaceExt.TexName);
   Self.EditTexSize.Caption:=' ' +
-    IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].MipWidth[0])
+    IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].nWidth)
     + 'x' +
-    IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].MipHeight[0]);
+    IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].nHeight);
   if (CurrFaceExt.isDummyTexture)
   then Self.EditTexWAD.Caption:=' #EXTERNAL'
   else Self.EditTexWAD.Caption:=' #INTERNAL';
@@ -1326,7 +1397,8 @@ begin
 
   if (BasetextureMng.DrawThumbnailToBitmap(
         BaseThumbnailBMP,
-        CurrFaceExt.TexRenderId
+        CurrFaceExt.TexRenderId,
+        SelectedMipmap
       ) = False) then
     begin
       BaseThumbnailBMP.Canvas.FillRect(BaseThumbnailBMP.Canvas.ClipRect);
@@ -1358,6 +1430,7 @@ begin
   Self.EditLmpStyle3.Caption:='';
 
   Self.RadioGroupLmp.Items.Clear();
+  Self.RadioButtonMip0.Checked:=True;
   Self.Update();
   {$R+}
 end;
@@ -1401,6 +1474,8 @@ begin
   if (Self.RadioGroupLmp.ItemIndex < 0) then Exit;
   if (CurrFaceExt.CountLightmaps <= 0) then Exit;
 
+  Self.OpenDialogBMP.Title:='Load lightmap with style index '
+    + IntToStr(Self.RadioGroupLmp.ItemIndex);
   if (Self.OpenDialogBMP.Execute) then
     begin
       LmpBitmap:=TBitmap.Create();
@@ -1441,6 +1516,186 @@ begin
         end;
       Self.UpdateFaceVisualInfo();
     end;
+  {$R+}
+end;
+
+procedure TMainForm.ButtonLoadTexClick(Sender: TObject);
+var
+  i: Integer;
+  CurrWad3Texture: PWad3Texture;
+begin
+  {$R-}
+  if (SelectedFaceIndex < 0) then Exit;
+
+  Self.OpenDialogBMP.Title:='Load texture from Bitmap of MipIndex ' + IntToStr(SelectedMipmap);
+  if (Self.OpenDialogBMP.Execute) then
+    begin
+      CurrWad3Texture:=@Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex];
+      if (CurrFaceExt.isDummyTexture) then
+        begin
+          CurrWad3Texture.PaletteColors:=256;
+          AllocTexture(CurrWad3Texture^);
+          AllocPalette(CurrWad3Texture^);
+          if (UpdateTextureFromBitmap(Self.OpenDialogBMP.FileName, CurrWad3Texture, 0)) then
+            begin
+              CurrFaceExt.TexName:=@CurrWad3Texture.szName;
+              CurrFaceExt.isDummyTexture:=False;
+              BasetextureMng.AppendBasetexture(CurrWad3Texture^);
+              for i:=0 to (Map.CountFaces - 1) do
+                begin
+                  Map.FaceExtList[i].TexRenderId:=BasetextureMng.GetBasetextureIdByName(
+                    Map.FaceExtList[i].TexName
+                  );
+                  if (Map.FaceExtList[i].TexRenderId < 0) then
+                    begin
+                      Map.FaceExtList[i].TexRenderId:=BASETEXTURE_DUMMY_ID;
+                    end
+                  else
+                    begin
+                      Map.FaceExtList[i].isDummyTexture:=False;
+                    end;
+                end;
+
+              if (BasetextureMng.DrawThumbnailToBitmap(
+                    BaseThumbnailBMP,
+                    CurrFaceExt.TexRenderId,
+                    SelectedMipmap
+                  ) = False) then
+                begin
+                  BaseThumbnailBMP.Canvas.FillRect(BaseThumbnailBMP.Canvas.ClipRect);
+                end;
+              Self.ImagePreviewBT.Canvas.Draw(0, 0, BaseThumbnailBMP);
+              Self.Update();
+            end
+          else
+            begin
+              ShowMessage('Error create new texture: Cannot open and read Bitmap file!');
+              FreeTextureAndPalette(CurrWad3Texture^);
+            end;
+        end
+      else
+        begin
+          if (UpdateTextureFromBitmap(Self.OpenDialogBMP.FileName, CurrWad3Texture, SelectedMipmap)) then
+            begin
+              BasetextureMng.UpdateBasetexture(CurrWad3Texture^, CurrFaceExt.TexRenderId);
+              if (BasetextureMng.DrawThumbnailToBitmap(
+                    BaseThumbnailBMP,
+                    CurrFaceExt.TexRenderId,
+                    SelectedMipmap
+                  ) = False) then
+                begin
+                  BaseThumbnailBMP.Canvas.FillRect(BaseThumbnailBMP.Canvas.ClipRect);
+                end;
+              Self.ImagePreviewBT.Canvas.Draw(0, 0, BaseThumbnailBMP);
+              Self.Update();
+            end
+          else
+            begin
+              ShowMessage('Error load texture: Cannot open and read Bitmap file'
+                + LF + 'or Bitmap have invalid size!');
+            end;
+        end;
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.ButtonSaveTexClick(Sender: TObject);
+begin
+  {$R-}
+  if ((SelectedFaceIndex < 0) or (CurrFaceExt.isDummyTexture)) then Exit;
+
+  if (Self.SaveDialogBMP.Execute) then
+    begin
+      SaveTextureToBitmap(Self.SaveDialogBMP.FileName,
+        @Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex],
+        SelectedMipmap
+      );
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.ButtonTexRebuildMipsClick(Sender: TObject);
+begin
+  {$R-}
+  if ((SelectedFaceIndex < 0) or (CurrFaceExt.isDummyTexture)) then Exit;
+  RebuildMipMaps(@Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex]);
+  BasetextureMng.UpdateBasetexture(
+    Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex],
+    CurrFaceExt.TexRenderId
+  );
+  {$R+}
+end;
+
+
+procedure TMainForm.RadioButtonMip0Click(Sender: TObject);
+begin
+  {$R+}
+  SelectedMipmap:=0;
+  if ((SelectedFaceIndex < 0) or (CurrFaceExt.isDummyTexture)) then Exit;
+  if (BasetextureMng.DrawThumbnailToBitmap(
+        BaseThumbnailBMP,
+        CurrFaceExt.TexRenderId,
+        SelectedMipmap
+      ) = False) then
+    begin
+      BaseThumbnailBMP.Canvas.FillRect(BaseThumbnailBMP.Canvas.ClipRect);
+    end;
+  Self.ImagePreviewBT.Canvas.Draw(0, 0, BaseThumbnailBMP);
+  Self.Update();
+  {$R+}
+end;
+
+procedure TMainForm.RadioButtonMip1Click(Sender: TObject);
+begin
+  {$R+}
+  SelectedMipmap:=1;
+  if ((SelectedFaceIndex < 0) or (CurrFaceExt.isDummyTexture)) then Exit;
+  if (BasetextureMng.DrawThumbnailToBitmap(
+        BaseThumbnailBMP,
+        CurrFaceExt.TexRenderId,
+        SelectedMipmap
+      ) = False) then
+    begin
+      BaseThumbnailBMP.Canvas.FillRect(BaseThumbnailBMP.Canvas.ClipRect);
+    end;
+  Self.ImagePreviewBT.Canvas.Draw(0, 0, BaseThumbnailBMP);
+  Self.Update();
+  {$R+}
+end;
+
+procedure TMainForm.RadioButtonMip2Click(Sender: TObject);
+begin
+  {$R+}
+  SelectedMipmap:=2;
+  if ((SelectedFaceIndex < 0) or (CurrFaceExt.isDummyTexture)) then Exit;
+  if (BasetextureMng.DrawThumbnailToBitmap(
+        BaseThumbnailBMP,
+        CurrFaceExt.TexRenderId,
+        SelectedMipmap
+      ) = False) then
+    begin
+      BaseThumbnailBMP.Canvas.FillRect(BaseThumbnailBMP.Canvas.ClipRect);
+    end;
+  Self.ImagePreviewBT.Canvas.Draw(0, 0, BaseThumbnailBMP);
+  Self.Update();
+  {$R+}
+end;
+
+procedure TMainForm.RadioButtonMip3Click(Sender: TObject);
+begin
+  {$R+}
+  SelectedMipmap:=3;
+  if ((SelectedFaceIndex < 0) or (CurrFaceExt.isDummyTexture)) then Exit;
+  if (BasetextureMng.DrawThumbnailToBitmap(
+        BaseThumbnailBMP,
+        CurrFaceExt.TexRenderId,
+        SelectedMipmap
+      ) = False) then
+    begin
+      BaseThumbnailBMP.Canvas.FillRect(BaseThumbnailBMP.Canvas.ClipRect);
+    end;
+  Self.ImagePreviewBT.Canvas.Draw(0, 0, BaseThumbnailBMP);
+  Self.Update();
   {$R+}
 end;
 
@@ -1517,6 +1772,7 @@ begin
   FirstSpawnEntityId:=0;
   SelectedFaceIndex:=-1;
   SelectedStyle:=0;
+  SelectedMipmap:=0;
   lpCameraLeaf:=nil;
   CurrFaceExt:=nil;
 
@@ -1587,9 +1843,9 @@ begin
         + 'Avg count vertecies per Face: '
           + FloatToStrF(Map.AvgVerteciesPerFace/Map.CountFaces, ffFixed, 2, 2) + LF
         + 'Count generated ' + IntToStr(MEGATEXTURE_SIZE) + 'x'
-          + IntToStr(MEGATEXTURE_SIZE) + 'x' + IntToStr(MEGATEXTURE_VOLUME_SIZE)
-          + ' Lightmap 3D Megatextures: '
-          + IntToStr(LightmapMegatexture.CountMegatextures3D)
+          + IntToStr(MEGATEXTURE_SIZE)
+          + ' Lightmap 2D Megatextures: '
+          + IntToStr(LightmapMegatexture.CountMegatextures)
       );
     end;
   {$R+}
@@ -1698,6 +1954,14 @@ begin
   {$R+}
 end;
 
+procedure TMainForm.TexPixelModeMenuClick(Sender: TObject);
+begin
+  {$R-}
+  BasetextureMng.SetFiltrationMode(Self.TexPixelModeMenu.Checked);
+  Self.TexPixelModeMenu.Checked:=not Self.TexPixelModeMenu.Checked;
+  {$R+}
+end;
+
 procedure TMainForm.DisableLightmapsMenuClick(Sender: TObject);
 begin
   {$R-}
@@ -1711,6 +1975,37 @@ begin
   {$R-}
   Self.DisableTexturesMenu.Checked:=not Self.DisableTexturesMenu.Checked;
   Self.UpdFaceDrawState();
+  {$R+}
+end;
+
+
+procedure TMainForm.LmpOverBright1MenuClick(Sender: TObject);
+begin
+  {$R-}
+  LightmapMegatexture.SetOverbrightMode(1);
+  Self.LmpOverBright1Menu.Checked:=True;
+  Self.LmpOverBright2Menu.Checked:=False;
+  Self.LmpOverBright4Menu.Checked:=False;
+  {$R+}
+end;
+
+procedure TMainForm.LmpOverBright2MenuClick(Sender: TObject);
+begin
+  {$R-}
+  LightmapMegatexture.SetOverbrightMode(2);
+  Self.LmpOverBright1Menu.Checked:=False;
+  Self.LmpOverBright2Menu.Checked:=True;
+  Self.LmpOverBright4Menu.Checked:=False;
+  {$R+}
+end;
+
+procedure TMainForm.LmpOverBright4MenuClick(Sender: TObject);
+begin
+  {$R-}
+  LightmapMegatexture.SetOverbrightMode(4);
+  Self.LmpOverBright1Menu.Checked:=False;
+  Self.LmpOverBright2Menu.Checked:=False;
+  Self.LmpOverBright4Menu.Checked:=True;
   {$R+}
 end;
 

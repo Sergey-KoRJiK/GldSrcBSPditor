@@ -144,6 +144,7 @@ type CMegatextureManager = class
     //
     procedure SetFiltrationMode(const isLinearFiltration: Boolean);
     procedure SetLightmapState(const isEnable: Boolean);
+    procedure SetOverbrightMode(const ScaleRGB: Integer);
   end;
 
 
@@ -347,7 +348,7 @@ begin
           glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, GL_SRC_ALPHA); //}
           {glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
           glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE);
-          glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_MODULATE);
+          glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_MODULATE); //}
           glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE, 1.0);
           glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0); //}
           //
@@ -846,6 +847,24 @@ begin
   {$R-}
   Self.bEnable:=isEnable;
   if (isEnable = False) then Self.UnbindMegatexture3D();
+  {$R+}
+end;
+
+procedure CMegatextureManager.SetOverbrightMode(const ScaleRGB: Integer);
+var
+  i: Integer;
+begin
+  {$R-}
+  if ((ScaleRGB = 1) or (ScaleRGB = 2) or (ScaleRGB = 4)) then
+    begin
+      glActiveTextureARB(GL_TEXTURE1);
+      for i:=0 to (Self.iCount3D - 1) do
+        begin
+          glBindTexture(GL_TEXTURE_3D, Self.Page3DList[i]);
+          glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE, ScaleRGB);
+        end;
+      glBindTexture(GL_TEXTURE_3D, 0);
+    end;
   {$R+}
 end;
 
