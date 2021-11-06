@@ -58,6 +58,7 @@ type tFaceExt = record
     //
     isDummyLightmaps: Boolean;
     isDummyTexture: Boolean;
+    isTriggerTexture: Boolean;
   end;
 type PFaceExt = ^tFaceExt;
 type AFaceExt = array of tFaceExt;
@@ -107,6 +108,7 @@ begin
   lpFaceExt.TexBBOX:=TEX_BBOX_ZERO;
   lpFaceExt.isDummyLightmaps:=False;
   lpFaceExt.isDummyTexture:=False;
+  lpFaceExt.isTriggerTexture:=False;
   {$R+}
 end;
 

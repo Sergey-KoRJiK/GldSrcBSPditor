@@ -80,7 +80,7 @@ type ABBOXs = array of tBBOXs;
 
 type tRay = packed record
     Start, Dir: tVec3f; // Dir must be normalized
-  end;
+  end; // 24 Bytes
 type PRay = ^tRay;
 type ARay = array of tRay;
 
@@ -106,6 +106,16 @@ type PPolygon3f = ^tPolygon3f;
 type APolygon3f = array of tPolygon3f;
 
 
+type tTraceInfo = packed record
+    iFace: Integer;         // Face intersection id
+    iTriangle: Integer;     // Triangle id of Face polygon
+    u, v: Single;           // barycentric coordinates of intersection point
+    t: Single;              // ray value of intersection point
+  end; // 20 Bytes
+type PTraceInfo = ^tTraceInfo;
+type ATraceInfo = array of tTraceInfo;
+
+
 type tRGB888 = packed record
     r, g, b: Byte;
   end;
@@ -128,6 +138,8 @@ type pRGBArray = ^TRGBArray;
 type pRGBAArray = ^TRGBAArray;
   TRGBAArray = ARRAY[0..32767] OF TRGBQuad;
 
+
+type PByteBool = ^ByteBool;
 
 type APointer = array of Pointer;
 type AByte = array of Byte;

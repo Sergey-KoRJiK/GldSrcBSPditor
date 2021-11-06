@@ -37,7 +37,7 @@ type tBasetexture = record
     glId: GLuint;       // OpenGL texture index
     Size: tVec2s;       // Width and Height
     Pixels: Pointer;    // Unpacked 32-bit textures with alpha
-    // Pixels consists of two blocks: four RGBA8888 Thumbnails and RGBA8888 Texture
+    // Pixels consists of two blocks: four RGBA8888 Thumbnails and four RGBA8888 MipMaps
   end; // 16 Bytes
 type PBasetexture = ^tBasetexture;
 type ABasetextyre = array of tBasetexture;
@@ -70,7 +70,6 @@ type CBasetextureManager = class
     procedure UnbindBasetexture();
     //
     procedure SetBasetextureState(const isEnable: Boolean);
-    procedure SetFiltrationMode(const isLinearFiltration: Boolean);
   end;
 
 
@@ -561,34 +560,6 @@ begin
   {$R-}
   Self.isEnable:=isEnable;
   if (isEnable = False) then Self.UnbindBasetexture();
-  {$R+}
-end;
-
-procedure CBasetextureManager.SetFiltrationMode(const isLinearFiltration: Boolean);
-var
-  i: Integer;
-begin
-  {$R-}
-  glActiveTextureARB(GL_TEXTURE0);
-  if (isLinearFiltration) then
-    begin
-      for i:=0 to (Self.iCountTextures - 1) do
-        begin
-          glBindTexture(GL_TEXTURE_2D, Self.ListBT[i].glId);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        end;
-    end
-  else
-    begin
-      for i:=0 to (Self.iCountTextures - 1) do
-        begin
-          glBindTexture(GL_TEXTURE_2D, Self.ListBT[i].glId);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        end;
-    end;
-  glBindTexture(GL_TEXTURE_2D, 0);
   {$R+}
 end;
 

@@ -128,6 +128,12 @@ procedure UpdateClipNodeExt(const Map: PMapBSP; const ClipNodeId: Integer);
 procedure UpdateEntityExt(const Map: PMapBSP; const EntityId: Integer);
 procedure UpdateEntityLight(const Map: PMapBSP);
 
+// Return true if TraceInfo.Ray intersect with Face on Map, or false.
+// Also filling TraceInfo field. SkipFaces used for ignore some faces, like by PVS
+// If SkipFaces = nil, then skipping is ignoring.
+function RayMapIntersection(const Map: tMapBSP; const Ray: tRay;
+  const TraceInfo: PTraceInfo; const SkipFaces: PByteBool): Boolean;
+
 
 implementation
 
@@ -159,7 +165,6 @@ begin
   Map.CountPlanes:=0;
   SetLength(Map.PlaneLump, 0);
 
-  SetLength(Map.TextureLump.OffsetsToTexture, 0);
   for i:=0 to (Map.TextureLump.nCountTextures - 1) do
     begin
       FreeTextureAndPalette(Map.TextureLump.Wad3Textures[i]);
@@ -252,6 +257,7 @@ var
   MapFile: File;
   //
   //lpFaceInfo: PFaceInfo;
+  OffsetsToTexture: AInt;
 begin
   {$R-}
   AssignFile(MapFile, FileName);
@@ -490,16 +496,14 @@ begin
   Seek(MapFile, CurrentFileOffset);
   Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nOffset:=CurrentFileOffset;
   //
-  ZeroFillDWORD(@Map.TextureLump.OffsetsToTexture[0], Map.TextureLump.nCountTextures*SizeOf(Integer));
+  SetLength(OffsetsToTexture, Map.TextureLump.nCountTextures);
   BlockWrite(MapFile, Map.TextureLump.nCountTextures, SizeOf(Integer));
-  BlockWrite(MapFile, (@Map.TextureLump.OffsetsToTexture[0])^,
-    Map.TextureLump.nCountTextures*SizeOf(Integer)
-  ); // first dummy write
+  BlockWrite(MapFile, (@OffsetsToTexture[0])^, Map.TextureLump.nCountTextures*SizeOf(Integer)); // first dummy write
 
   // Save Textures
   for i:=0 to (Map.TextureLump.nCountTextures - 1) do
     begin
-      Map.TextureLump.OffsetsToTexture[i]:=FileSize(MapFile) - CurrentFileOffset;
+      OffsetsToTexture[i]:=FileSize(MapFile) - CurrentFileOffset;
       BlockWrite(MapFile, (@Map.TextureLump.Wad3Textures[i])^, MIPTEX_SIZE);
 
       if (Map.TextureLump.Wad3Textures[i].nOffsets[0] = MIPTEX_SIZE) then
@@ -520,9 +524,8 @@ begin
   Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nLength:=FileSize(MapFile) - CurrentFileOffset;
   //
   Seek(MapFile, CurrentFileOffset + SizeOf(Integer));
-  BlockWrite(MapFile, (@Map.TextureLump.OffsetsToTexture[0])^,
-    Map.TextureLump.nCountTextures*SizeOf(Integer)
-  );
+  BlockWrite(MapFile, (@OffsetsToTexture[0])^, Map.TextureLump.nCountTextures*SizeOf(Integer));
+  SetLength(OffsetsToTexture, 0);
 
   // Save Map Header
   Seek(MapFile, 0);
@@ -547,6 +550,7 @@ var
   MapFile: File;
   tmpList: TStringList;
   tmpEntityLump: String;
+  TexBlockOffsets: AInt;
 begin
   {$R-}
   LoadBSP30FromFile:=False;
@@ -651,18 +655,18 @@ begin
       Seek(MapFile, Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nOffset);
       BlockRead(MapFile, Map.TextureLump.nCountTextures, SizeOf(Integer));
       //
-      SetLength(Map.TextureLump.OffsetsToTexture, Map.TextureLump.nCountTextures);
-      BlockRead(MapFile, (@Map.TextureLump.OffsetsToTexture[0])^, Map.TextureLump.nCountTextures*SizeOf(Integer));
+      SetLength(TexBlockOffsets, Map.TextureLump.nCountTextures);
+      BlockRead(MapFile, (@TexBlockOffsets[0])^, Map.TextureLump.nCountTextures*4);
       //
-      SetLength(Map.TextureLump.Wad3Textures, Map.TextureLump.nCountTextures);
-
+      SetLength(Map.TextureLump.Wad3Textures, Map.TextureLump.nCountTextures); 
       for i:=0 to (Map.TextureLump.nCountTextures - 1) do
         begin
+          Seek(MapFile, Map.MapHeader.LumpsInfo[LUMP_TEXTURES].nOffset + TexBlockOffsets[i]);
           BlockRead(MapFile, (@Map.TextureLump.Wad3Textures[i])^, MIPTEX_SIZE);
           Map.TextureLump.Wad3Textures[i].szName[15]:=#0; // just protect ourselves
 
           Map.TextureLump.Wad3Textures[i].MipData[0]:=nil;
-          if (Map.TextureLump.Wad3Textures[i].nOffsets[0] = MIPTEX_SIZE) then
+          if (Map.TextureLump.Wad3Textures[i].nOffsets[0] > 0) then
             begin
               AllocTexture(Map.TextureLump.Wad3Textures[i]);
               // Read Pixel-Index Data
@@ -679,6 +683,7 @@ begin
               BlockRead(MapFile, (@Map.TextureLump.Wad3Textures[i].Padding)^, SizeOf(Word));
             end;
         end;
+      SetLength(TexBlockOffsets, 0);
     end
   else
     begin
@@ -1096,23 +1101,16 @@ begin
       lpFaceExt.isDummyLightmaps:=True;
     end;
 
-  if (Map.TextureLump.Wad3Textures[lpFaceExt.Wad3TextureIndex].MipSize[0] <= 0) then
+  lpFaceExt.RenderColor:=WhiteColor4f;
+  lpFaceExt.isDummyTexture:=Boolean(
+    Map.TextureLump.Wad3Textures[lpFaceExt.Wad3TextureIndex].MipSize[0] <= 0
+  );
+
+  i:=GetTexNameColorPairIndex(lpFaceExt.TexName);
+  lpFaceExt.isTriggerTexture:=Boolean(i = TEXNAMEINDEX_AAATRIGGER);
+  if (lpFaceExt.isDummyTexture) then
     begin
-      lpFaceExt.isDummyTexture:=True;
-      i:=GetTexNameColorPairIndex(lpFaceExt.TexName);
-      if (i >= 0) then
-        begin
-          lpFaceExt.RenderColor:=TEXNAMECOLOR_PAIRTABLE[i].Color;
-        end
-      else
-        begin
-          lpFaceExt.RenderColor:=WhiteColor4f;
-        end;
-    end
-  else
-    begin
-      lpFaceExt.isDummyTexture:=False;
-      lpFaceExt.RenderColor:=WhiteColor4f;
+      if (i >= 0) then lpFaceExt.RenderColor:=TEXNAMECOLOR_PAIRTABLE[i].Color;
     end;
 
   // After loaded lightmaps, mark offset for RAW Face data to -1
@@ -1517,6 +1515,40 @@ begin
           Inc(k);
         end;
     end;
+  {$R+}
+end;
+
+function RayMapIntersection(const Map: tMapBSP; const Ray: tRay;
+  const TraceInfo: PTraceInfo; const SkipFaces: PByteBool): Boolean;
+var
+  i: Integer;
+  dist: Single;
+begin
+  {$R-}
+  Dist:=1E+10;
+
+  TraceInfo.iFace:=-1;
+  for i:=0 to (Map.CountFaces - 1) do
+    begin
+      if ((SkipFaces <> nil) and (AByteBool(SkipFaces)[i])) then Continue;
+
+      TraceInfo.iTriangle:=GetRayPolygonIntersection(
+        @Map.FaceExtList[i].Polygon,
+        Ray,
+        @TraceInfo.u
+      );
+      if (TraceInfo.iTriangle >= 0) then
+        begin
+          // Use fast integer compare technique for positives Float-32 IEEE-754;
+          if (PInteger(@TraceInfo.t)^ < PInteger(@Dist)^) then
+            begin
+              Dist:=TraceInfo.t;
+              TraceInfo.iFace:=i;
+            end;
+        end;
+    end;
+
+  Result:=Boolean(TraceInfo.iFace >= 0);
   {$R+}
 end;
 
