@@ -1,0 +1,13 @@
+Form live start at "procedure TMainForm.FormCreate(Sender: TObject);" in Unit1.pas, where construct opengl renderer and custom managers
+live and render in "procedure TMainForm.Idle(Sender: TObject; var Done: Boolean);" and "procedure TMainForm.PanelRTResize(Sender: TObject);"
+and dead in "procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);"
+"procedure TMainForm.LoadMapMenuClick(Sender: TObject);" and "procedure TMainForm.CloseMapMenuClick(Sender: TObject);" - live of BSP map.
+LoadBSP30FromFile called from Modules/GoldSrcBSP/UnitBSPstruct.pas and that it's main file of GoldSrc map definition,
+each pas file in same folder incapsulate one or more BSP lump.
+UnitOpenGLext.pas contain OpenGL extenstion to 4.6 of default build-in Delphi 7 OpenGL 1.0.
+UnitOpenGLFPSCamera.pas contain class of player view camera and generation projection matrix.
+UnitMegatextureManager.pas contin manager for quake2-style lightmap megatexture packing and management.
+UnitQueryPerformanceTimer.pas contain class that incapsulate WinAPI QueryPerformanceCounter for time measurement.
+UnitRenderingContextManager.pas incapsulate in class wglCreateContext and free method of it.
+UnitRescaling2D.pas used for preview selected face textures in middle-left status bar.
+UnitVec.pas and UnitUserTypes.pas contain based types and routine functions, used by all project .pas code-files.

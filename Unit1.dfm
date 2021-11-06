@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 513
-  Top = 152
+  Left = 560
+  Top = 170
   Width = 791
   Height = 644
   Caption = 'MainForm'
@@ -326,7 +326,7 @@ object MainForm: TMainForm
       object ImagePreviewBT: TImage
         Tag = 4
         Left = 40
-        Top = 84
+        Top = 60
         Width = 128
         Height = 128
       end
@@ -404,114 +404,75 @@ object MainForm: TMainForm
         ParentFont = False
         TabOrder = 3
       end
-      object LabelTexWAD: TStaticText
-        Left = 0
-        Top = 60
-        Width = 49
-        Height = 20
-        AutoSize = False
-        BevelInner = bvNone
-        BevelOuter = bvNone
-        BorderStyle = sbsSingle
-        Caption = ' WAD'
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clGray
-        Font.Height = -13
-        Font.Name = 'Script'
-        Font.Style = []
-        ParentFont = False
-        TabOrder = 4
-      end
-      object EditTexWAD: TStaticText
-        Left = 48
-        Top = 60
-        Width = 129
-        Height = 20
-        AutoSize = False
-        BevelInner = bvNone
-        BevelOuter = bvNone
-        BorderStyle = sbsSingle
-        Caption = ' No selected'
-        Color = clBlack
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clSilver
-        Font.Height = -13
-        Font.Name = 'Script'
-        Font.Style = []
-        ParentColor = False
-        ParentFont = False
-        TabOrder = 5
-      end
       object ButtonLoadTex: TButton
         Left = 1
-        Top = 219
+        Top = 195
         Width = 88
         Height = 22
         Caption = 'Load'
-        TabOrder = 6
+        TabOrder = 4
         OnClick = ButtonLoadTexClick
       end
       object ButtonSaveTex: TButton
         Left = 89
-        Top = 219
+        Top = 195
         Width = 88
         Height = 22
         Caption = 'Save'
-        TabOrder = 7
+        TabOrder = 5
         OnClick = ButtonSaveTexClick
       end
       object ButtonTexRebuildMips: TButton
         Left = 25
-        Top = 243
+        Top = 219
         Width = 128
         Height = 22
         Caption = 'Rebuild MipMaps'
-        Enabled = False
-        TabOrder = 8
+        TabOrder = 6
         OnClick = ButtonTexRebuildMipsClick
       end
       object RadioButtonMip0: TRadioButton
         Left = 8
-        Top = 112
+        Top = 88
         Width = 25
         Height = 17
         Caption = '1'
         Checked = True
-        TabOrder = 9
+        TabOrder = 7
         TabStop = True
         OnClick = RadioButtonMip0Click
       end
       object RadioButtonMip1: TRadioButton
         Left = 8
-        Top = 136
+        Top = 112
         Width = 25
         Height = 17
         Caption = '2'
-        TabOrder = 10
+        TabOrder = 8
         OnClick = RadioButtonMip1Click
       end
       object RadioButtonMip2: TRadioButton
         Left = 8
-        Top = 160
+        Top = 136
         Width = 25
         Height = 17
         Caption = '3'
-        TabOrder = 11
+        TabOrder = 9
         OnClick = RadioButtonMip2Click
       end
       object RadioButtonMip3: TRadioButton
         Left = 8
-        Top = 184
+        Top = 160
         Width = 25
         Height = 17
         Caption = '4'
-        TabOrder = 12
+        TabOrder = 10
         OnClick = RadioButtonMip3Click
       end
       object StaticText1: TStaticText
         Left = 0
-        Top = 84
-        Width = 41
+        Top = 60
+        Width = 39
         Height = 21
         AutoSize = False
         BevelInner = bvNone
@@ -524,7 +485,7 @@ object MainForm: TMainForm
         Font.Name = 'Script'
         Font.Style = []
         ParentFont = False
-        TabOrder = 13
+        TabOrder = 11
       end
     end
     object GroupBoxLightmapInfo: TGroupBox
@@ -773,13 +734,14 @@ object MainForm: TMainForm
           Caption = 'Draw BBOX VisLeaf'
           OnClick = RenderBBOXVisLeafClick
         end
+        object DrawTriggersMenu: TMenuItem
+          Caption = 'Draw Triggers'
+          Checked = True
+          OnClick = DrawTriggersMenuClick
+        end
         object LmpPixelModeMenu: TMenuItem
           Caption = 'Pixelate Lightmaps'
           OnClick = LmpPixelModeMenuClick
-        end
-        object TexPixelModeMenu: TMenuItem
-          Caption = 'Pixelate Texture'
-          OnClick = TexPixelModeMenuClick
         end
         object DisableLightmapsMenu: TMenuItem
           Caption = 'Disable Lightmaps'
@@ -806,13 +768,6 @@ object MainForm: TMainForm
           end
         end
       end
-      object FaceCullingMenu: TMenuItem
-        Caption = 'Face Culling'
-        object OcclusionMenu: TMenuItem
-          Caption = 'Occlusion'
-          OnClick = OcclusionMenuClick
-        end
-      end
       object CollisionMenu: TMenuItem
         Caption = 'Enable Collision'
         Enabled = False
@@ -829,6 +784,14 @@ object MainForm: TMainForm
       object ShowHeaderMenu: TMenuItem
         Caption = 'Show Header'
         OnClick = ShowHeaderMenuClick
+      end
+      object ImportWAD3Menu: TMenuItem
+        Caption = 'Import textures from WAD3'
+        OnClick = ImportWAD3MenuClick
+      end
+      object ExportTextureLumpWAD3: TMenuItem
+        Caption = 'Export map textures to WAD3'
+        OnClick = ExportTextureLumpWAD3Click
       end
     end
     object HelpMenu: TMenuItem
@@ -865,5 +828,16 @@ object MainForm: TMainForm
     Filter = 'Bitmap |*.bmp'
     Left = 72
     Top = 40
+  end
+  object OpenDialogWAD3: TOpenDialog
+    Filter = 'GoldSrc WAD3|*.wad'
+    Left = 40
+    Top = 72
+  end
+  object SaveDialogWAD3: TSaveDialog
+    DefaultExt = 'wad'
+    Filter = 'GoldSrc WAD3|*.wad'
+    Left = 72
+    Top = 72
   end
 end

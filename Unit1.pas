@@ -72,8 +72,6 @@ type
     OpenDialogBMP: TOpenDialog;
     SaveDialogBMP: TSaveDialog;
     RenderBBOXVisLeaf: TMenuItem;
-    FaceCullingMenu: TMenuItem;
-    OcclusionMenu: TMenuItem;
     RenderMenu: TMenuItem;
     PanelRT: TPanel;
     PanelFaceInfo: TPanel;
@@ -116,8 +114,6 @@ type
     CloseMenu: TMenuItem;
     DisableLightmapsMenu: TMenuItem;
     DisableTexturesMenu: TMenuItem;
-    LabelTexWAD: TStaticText;
-    EditTexWAD: TStaticText;
     ShowOpenGLInformationMenu: TMenuItem;
     GotoMenu: TMenuItem;
     GotoCamPosSubMenu: TMenuItem;
@@ -129,7 +125,6 @@ type
     ButtonLoadTex: TButton;
     ButtonSaveTex: TButton;
     ButtonTexRebuildMips: TButton;
-    TexPixelModeMenu: TMenuItem;
     LmpOverBrightMenu: TMenuItem;
     LmpOverBright1Menu: TMenuItem;
     LmpOverBright2Menu: TMenuItem;
@@ -139,6 +134,11 @@ type
     RadioButtonMip2: TRadioButton;
     RadioButtonMip3: TRadioButton;
     StaticText1: TStaticText;
+    DrawTriggersMenu: TMenuItem;
+    ImportWAD3Menu: TMenuItem;
+    OpenDialogWAD3: TOpenDialog;
+    ExportTextureLumpWAD3: TMenuItem;
+    SaveDialogWAD3: TSaveDialog;
     function TestRequarementExtensions(): Boolean;
     procedure InitGL();
     procedure GetVisleafRenderList();
@@ -169,7 +169,6 @@ type
     procedure SaveMapMenuClick(Sender: TObject);
     procedure SetSelectedFaceColorMenuClick(Sender: TObject);
     procedure RenderBBOXVisLeafClick(Sender: TObject);
-    procedure OcclusionMenuClick(Sender: TObject);
     procedure PanelRTResize(Sender: TObject);
     procedure PanelRTMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
@@ -196,7 +195,6 @@ type
     procedure ButtonLoadTexClick(Sender: TObject);
     procedure ButtonSaveTexClick(Sender: TObject);
     procedure ButtonTexRebuildMipsClick(Sender: TObject);
-    procedure TexPixelModeMenuClick(Sender: TObject);
     procedure LmpOverBright1MenuClick(Sender: TObject);
     procedure LmpOverBright2MenuClick(Sender: TObject);
     procedure LmpOverBright4MenuClick(Sender: TObject);
@@ -204,6 +202,9 @@ type
     procedure RadioButtonMip1Click(Sender: TObject);
     procedure RadioButtonMip2Click(Sender: TObject);
     procedure RadioButtonMip3Click(Sender: TObject);
+    procedure DrawTriggersMenuClick(Sender: TObject);
+    procedure ImportWAD3MenuClick(Sender: TObject);
+    procedure ExportTextureLumpWAD3Click(Sender: TObject);
   private
     RenderContext: CRenderingContextManager;
     RenderTimer: CRenderTimerManager;
@@ -253,9 +254,9 @@ const
     'Change Lightmap Style Page: key F' + LF +
     'Additional info showed in bottom Status Bar';
   AboutStr: String = 'Copyright (c) 2020 Sergey Smolovsky, Belarus' + LF +
-    'email: sergeysmol4444@mail.ru' + LF +
+    'email: sergeysmol4444@yandex.ru' + LF +
     'GoldSrc BSP Editor' + LF +
-    'Program version: 1.2.0' + LF +
+    'Program version: 1.3.0' + LF +
     'Version of you OpenGL: ';
   MainFormCaption: String = 'GoldSrc BSP Editor';
 
@@ -275,6 +276,7 @@ var
   CollisionInfo: tCollisionInfo;
   //
   // Render VisLeaf options
+  FaceOcclusion: Boolean = False;
   BaseCubeLeafWireframeList: GLuint = 0;
   SecondCubeLeafWireframeList: GLuint = 0;
   StartOrts: GLuint = 0;
@@ -557,6 +559,7 @@ begin
         Self.Camera.ViewPosition,
         Map.RootNodeIndex
       );
+      FaceOcclusion:=Boolean(CameraLeafId > 0);
 
       if (CameraLeafId <> CameraLastLeafId) then
         begin
@@ -583,7 +586,7 @@ begin
             end
           else
             begin
-              if (Self.OcclusionMenu.Checked = False) then
+              if (FaceOcclusion = False) then
                 begin
                   FillChar(FacesIndexToRender[0], Map.CountFaces, RenderFrameIterator);
                   FillChar(BrushIndexToRender[0], Map.CountBrushModels, RenderFrameIterator);
@@ -604,7 +607,7 @@ var
   tmpBrushModelExt: PBrushModelExt;
 begin
   {$R-}
-  if (Self.OcclusionMenu.Checked) then
+  if (FaceOcclusion) then
     begin
       if (TestPointInBBOX(Map.MapBBOX, Self.Camera.ViewPosition)) then
         begin
@@ -621,7 +624,7 @@ begin
       // For each VisLeaf on Map
       tmpVisLeaf:=@Map.VisLeafExtList[i + 1];
 
-      if (Self.OcclusionMenu.Checked) then
+      if (FaceOcclusion) then
         begin
           // For each visible VisLeaf for lpCameraLeaf by PVS Table
           if (LeafIndexToRender[i] <> RenderFrameIterator) then Continue;
@@ -647,6 +650,18 @@ begin
             end; //}
         end;
     end; // End For each VisLeaf on Map
+
+  if (Self.DrawTriggersMenu.Checked = False) then
+    begin
+      for i:=0 to (Map.CountFaces - 1) do
+        begin
+          if (Map.FaceExtList[i].isTriggerTexture
+            and (FacesIndexToRender[i] = RenderFrameIterator)) then
+            begin
+              FacesIndexToRender[i]:=not RenderFrameIterator;
+            end;
+        end;
+    end;
   {$R+}
 end;
 
@@ -956,6 +971,7 @@ begin
     end;
   {$R+}
 end;
+
 
 procedure TMainForm.DrawScence(Sender: TObject);
 var
@@ -1343,9 +1359,6 @@ begin
     IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].nWidth)
     + 'x' +
     IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].nHeight);
-  if (CurrFaceExt.isDummyTexture)
-  then Self.EditTexWAD.Caption:=' #EXTERNAL'
-  else Self.EditTexWAD.Caption:=' #INTERNAL';
 
   Self.EditLmpSize.Caption:='';
   Self.EditLmpStyle1.Caption:='';
@@ -1420,7 +1433,6 @@ begin
 
   Self.EditTexName.Caption:='';
   Self.EditTexSize.Caption:='';
-  Self.EditTexWAD.Caption:='';
   Self.ImagePreviewBT.Canvas.Brush.Color:=clBlack;
   Self.ImagePreviewBT.Canvas.FillRect(Self.ImagePreviewBT.Canvas.ClipRect);
 
@@ -1927,21 +1939,11 @@ begin
   {$R+}
 end;
 
-
-procedure TMainForm.OcclusionMenuClick(Sender: TObject);
+procedure TMainForm.DrawTriggersMenuClick(Sender: TObject);
 begin
   {$R-}
-  Self.OcclusionMenu.Checked:=not Self.OcclusionMenu.Checked;
-  if (Self.OcclusionMenu.Checked) then
-    begin
-      FillChar(FacesIndexToRender[0], Map.CountFaces, not RenderFrameIterator);
-      FillChar(BrushIndexToRender[0], Map.CountBrushModels, not RenderFrameIterator);
-    end
-  else
-    begin
-      FillChar(FacesIndexToRender[0], Map.CountFaces, RenderFrameIterator);
-      FillChar(BrushIndexToRender[0], Map.CountBrushModels, RenderFrameIterator);
-    end;
+  Self.DrawTriggersMenu.Checked:=not Self.DrawTriggersMenu.Checked;
+  Self.GetFaceRenderList();
   {$R+}
 end;
 
@@ -1951,14 +1953,6 @@ begin
   {$R-}
   LightmapMegatexture.SetFiltrationMode(Self.LmpPixelModeMenu.Checked);
   Self.LmpPixelModeMenu.Checked:=not Self.LmpPixelModeMenu.Checked;
-  {$R+}
-end;
-
-procedure TMainForm.TexPixelModeMenuClick(Sender: TObject);
-begin
-  {$R-}
-  BasetextureMng.SetFiltrationMode(Self.TexPixelModeMenu.Checked);
-  Self.TexPixelModeMenu.Checked:=not Self.TexPixelModeMenu.Checked;
   {$R+}
 end;
 
@@ -2100,6 +2094,98 @@ begin
             Map.Entities[EntId].Angles.y*AngleToRadian - Pi/2
           );
         end;
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.ImportWAD3MenuClick(Sender: TObject);
+var
+  WAD3: tTextureLump;
+  i, j, k, replaceCount: Integer;
+begin
+  {$R-}
+  if (isBspLoad = False) then Exit;
+
+  WAD3.nCountTextures:=0;
+  WAD3.Wad3Textures:=nil;
+  if (Self.OpenDialogWAD3.Execute) then
+    begin
+      if (LoadTextureLumpFromWAD3(Self.OpenDialogWAD3.FileName, @WAD3)) then
+        begin
+          replaceCount:=0;
+          for i:=0 to (WAD3.nCountTextures - 1) do
+            begin
+              for j:=0 to (Map.TextureLump.nCountTextures - 1) do
+                begin
+                  if ((WAD3.Wad3Textures[i].nWidth <> Map.TextureLump.Wad3Textures[j].nWidth)
+                    or (WAD3.Wad3Textures[i].nHeight <> Map.TextureLump.Wad3Textures[j].nHeight)
+                    ) then Continue;
+
+                  if (CompareTextureNames(
+                      @WAD3.Wad3Textures[i].szName,
+                      @Map.TextureLump.Wad3Textures[j].szName)) then
+                    begin
+                      if (Map.TextureLump.Wad3Textures[j].MipData[0] = nil) then
+                        begin
+                          Map.TextureLump.Wad3Textures[j].PaletteColors:=WAD3.Wad3Textures[i].PaletteColors;
+                          AllocTexture(Map.TextureLump.Wad3Textures[j]);
+                          AllocPalette(Map.TextureLump.Wad3Textures[j]);
+                          CopyPixelData(@WAD3.Wad3Textures[i], @Map.TextureLump.Wad3Textures[j]);
+                          BasetextureMng.AppendBasetexture(Map.TextureLump.Wad3Textures[j]);
+                        end
+                      else
+                        begin
+                          CopyPixelData(@WAD3.Wad3Textures[i], @Map.TextureLump.Wad3Textures[j]);
+                          k:=BasetextureMng.GetBasetextureIdByName(
+                            @Map.TextureLump.Wad3Textures[j].szName
+                          );
+                          BasetextureMng.UpdateBasetexture(Map.TextureLump.Wad3Textures[j], k);
+                        end;
+                      Inc(replaceCount);
+                    end;
+                end;
+            end;
+          //
+          for i:=0 to (Map.CountFaces - 1) do
+            begin
+              Map.FaceExtList[i].TexRenderId:=BasetextureMng.GetBasetextureIdByName(
+                Map.FaceExtList[i].TexName
+              );
+              if (Map.FaceExtList[i].TexRenderId < 0) then
+                begin
+                  Map.FaceExtList[i].TexRenderId:=BASETEXTURE_DUMMY_ID;
+                end
+              else
+                begin
+                  Map.FaceExtList[i].isDummyTexture:=False;
+                end;
+            end;
+          //
+          ShowMessage('Loaded ' + IntToStr(WAD3.nCountTextures) + ' Textures.'
+            + LF + 'Updated ' + IntToStr(replaceCount) + ' Textures.'
+          );
+        end
+      else
+        begin
+          ShowMessage('Error open WAD3 File !');
+        end;
+    end;
+  FreeTextureLump(WAD3);
+  {$R+}
+end;
+
+procedure TMainForm.ExportTextureLumpWAD3Click(Sender: TObject);
+var
+  CountSave: Integer;
+begin
+  {$R-}
+  if (isBspLoad = False) then Exit;
+
+  if (Self.SaveDialogWAD3.Execute) then
+    begin
+      CountSave:=SaveTextureLumpToWAD3(Self.SaveDialogWAD3.FileName, @Map.TextureLump);
+      if (CountSave > 0) then ShowMessage('Saved ' + IntToStr(CountSave) + ' textures to WAD3')
+      else ShowMessage('Map dont have exists textures for save!');
     end;
   {$R+}
 end;
