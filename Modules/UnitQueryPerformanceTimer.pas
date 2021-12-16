@@ -1,6 +1,6 @@
 unit UnitQueryPerformanceTimer;
 
-{this module created By Sergey Smolovsky, e-mail: sergeysmol4444@mail.ru}
+{this module created By Sergey Smolovsky, e-mail: sergeysmol4444@yandex.ru}
 
 interface
 
