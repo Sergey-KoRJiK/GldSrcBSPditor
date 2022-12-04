@@ -1,6 +1,6 @@
 unit Unit1;
 
-// Copyright (c) 2020 Sergey Smolovsky, Belarus
+// Copyright (c) 2020 Sergey-KoRJiK, Belarus
 
 interface
 
@@ -253,8 +253,7 @@ const
     'Select Face: Right Mouse Button' + LF +
     'Change Lightmap Style Page: key F' + LF +
     'Additional info showed in bottom Status Bar';
-  AboutStr: String = 'Copyright (c) 2020 Sergey Smolovsky, Belarus' + LF +
-    'email: sergeysmol4444@yandex.ru' + LF +
+  AboutStr: String = 'Copyright (c) 2020 Sergey-KoRJiK, Belarus' + LF +
     'GoldSrc BSP Editor' + LF +
     'Program version: 1.3.0' + LF +
     'Version of you OpenGL: ';
