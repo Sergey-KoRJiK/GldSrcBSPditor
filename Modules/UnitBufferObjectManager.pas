@@ -1,6 +1,6 @@
 unit UnitBufferObjectManager;
 
-// Copyright (c) 2021 Sergey Smolovsky, Belarus
+// Copyright (c) 2021 Sergey-KoRJiK, Belarus
 
 interface
 
