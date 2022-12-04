@@ -1,6 +1,6 @@
 unit UnitOpenGLext;
 
-// This module ported by Sergey Smolovsky, 2020, e-mail: sergeysmol4444@yandex.ru
+// This module ported by Sergey-KoRJiK, 2020
 
 // Original file: glext.h, license from this file:
 // ***********************************************************************************
