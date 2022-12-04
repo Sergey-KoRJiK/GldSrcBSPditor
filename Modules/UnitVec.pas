@@ -1,6 +1,6 @@
 unit UnitVec;
 
-// Copyright (c) 2020 Sergey Smolovsky, Belarus
+// Copyright (c) 2020 Sergey-KoRJiK, Belarus
 
 interface
 
@@ -883,7 +883,7 @@ var
 begin
   {$R-}
   // Based on: Moller, Tomas; Trumbore, Ben (1997). "Fast, Minimum Storage
-  // Ray-Triangle Intersection". Journal of Graphics Tools. 2: 21–28.
+  // Ray-Triangle Intersection". Journal of Graphics Tools. 2: 21Â–28.
 
   // u, v - normalized barycentric coordinates on Poly triangle;
   // t - ray value;
