@@ -1,6 +1,3 @@
-Copyright (c) 2020 Sergey Smolovsky, Belarus
-e-mail: sergeysmol4444@yandex.ru
-
 # This program created for edit GldSrc BSP. 
 - Lightmap Editor (import/export per Face for each style 0..3)
 - Texture Editor (import/export for each mipmap, mass Export to WAD3, mass import from WAD3)
