@@ -1,6 +1,6 @@
 unit UnitEntity;
 
-// Copyright (c) 2020 Sergey Smolovsky, Belarus
+// Copyright (c) 2020 Sergey-KoRJiK, Belarus
 
 interface
 
