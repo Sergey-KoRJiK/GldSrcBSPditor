@@ -1,11 +1,13 @@
 unit UnitVisLeaf;
 
 // Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 interface
 
 uses
-  UnitUserTypes;
+  UnitUserTypes,
+  UnitVec;
 
 const
   CONTENTS_EMPTY: Integer           = -1;
@@ -37,10 +39,13 @@ type AVisLeaf = array of tVisLeaf;
 
 type tVisLeafExt = record
     BaseLeaf: tVisLeaf;
-    BBOXf: tBBOXf;
-    SizeBBOXf: tVec3f;
+    BBOX4f: tBBOX4f;
+    SizeBBOX4f: tVec4f;
     CountPVS: Integer;
-    WFaceIndexes: AInt;
+    CountWFaces: Integer;
+    CountBModels: Integer;
+    WFaceIndexes: AWord;
+    BModelIndexes: AWord;
     PVS: AByteBool;
   end;
 type PVisLeafExt = ^tVisLeafExt;
@@ -50,8 +55,9 @@ type AVisLeafExt = array of tVisLeafExt;
 procedure FreeVisLeafExt(const lpLeafExt: PVisLeafExt);
 function TestGoodLeafBBOX(const lpLeafExt: PVisLeafExt): Boolean;
 function IsGoodLeafContents(const lpLeafExt: PVisLeafExt): Boolean;
-function UnPackPVS(const PackedPVS: AByte; var UnPackedPVS: AByteBool;
-  const CountPVS, PackedSize: Integer): Integer;
+
+function UnPackPVS(
+  const PackedPVS: PByte; const UnPackedPVS: PByteBool; const CountPVS, PackedSize: Integer): Integer;
 
 
 implementation
@@ -62,7 +68,12 @@ begin
   {$R-}
   SetLength(lpLeafExt.WFaceIndexes, 0);
   SetLength(lpLeafExt.PVS, 0);
+  SetLength(lpLeafExt.BModelIndexes, 0);
   lpLeafExt.CountPVS:=0;
+  lpLeafExt.CountWFaces:=0;
+  lpLeafExt.CountBModels:=0;
+  lpLeafExt.BBOX4f:=BBOX_ZERO_4F;
+  lpLeafExt.SizeBBOX4f:=VEC_ZERO_4F;
   {$R+}
 end;
 
@@ -90,56 +101,74 @@ begin
 end;
 
 
-function UnPackPVS(const PackedPVS: AByte; var UnPackedPVS: AByteBool;
-  const CountPVS, PackedSize: Integer): Integer;
+function UnPackPVS(
+  const PackedPVS: PByte; const UnPackedPVS: PByteBool; const CountPVS, PackedSize: Integer): Integer;
+const
+  bitLUT: array[0..15] of Integer = (
+    $00000000, $00000001, $00000100, $00000101,
+    $00010000, $00010001, $00010100, $00010101,
+    $01000000, $01000001, $01000100, $01000101,
+    $01010000, $01010001, $01010100, $01010101
+  );
 var
-  i, j: Integer;
+  i, j, n: Integer;
+  tmp: Byte;
+  PackPtr, UnpackPtr: PByte;
 begin
   {$R-}
-  Result:=0;
-  SetLength(UnPackedPVS, 0);
-
+  n:=0;
   i:=0;
-  while ((i < PackedSize) and (Result <= CountPVS))do
+  PackPtr:=Pointer(PackedPVS);
+  UnpackPtr:=Pointer(UnPackedPVS);
+  while (n < PackedSize) do
     begin
-      if (PackedPVS[i] = 0) then
+      if (PackPtr^ = 0) then
         begin
-          // UnPack data
+          Inc(PackPtr);
           Inc(i);
-          j:=0;
-          while (j < PackedPVS[i]) do
+          if (i >= PackedSize) then
             begin
-              Inc(Result, 8);
-              SetLength(UnPackedPVS, Result);
-              UnPackedPVS[Result-1]:=ByteBool(False);
-              UnPackedPVS[Result-2]:=ByteBool(False);
-              UnPackedPVS[Result-3]:=ByteBool(False);
-              UnPackedPVS[Result-4]:=ByteBool(False);
-              UnPackedPVS[Result-5]:=ByteBool(False);
-              UnPackedPVS[Result-6]:=ByteBool(False);
-              UnPackedPVS[Result-7]:=ByteBool(False);
-              UnPackedPVS[Result-8]:=ByteBool(False);
-              Inc(j);
+              Result:=n;
+              Exit;
             end;
+          j:=(PackPtr^)*8;
+          if ((n + j) > CountPVS) then
+            begin
+              ZeroFillChar(UnpackPtr, CountPVS - n);
+              Result:=CountPVS;
+              Exit;
+            end;
+          ZeroFillChar(UnpackPtr, j);
+          Inc(n, j);
+          Inc(UnpackPtr, j);
         end
       else
         begin
-          // No need UnPack
-          Inc(Result, 8);
-          SetLength(UnPackedPVS, Result);
-          UnPackedPVS[Result-1]:=ByteBool(((PackedPVS[i] shr 7) and $01) <> 0);
-          UnPackedPVS[Result-2]:=ByteBool(((PackedPVS[i] shr 6) and $01) <> 0);
-          UnPackedPVS[Result-3]:=ByteBool(((PackedPVS[i] shr 5) and $01) <> 0);
-          UnPackedPVS[Result-4]:=ByteBool(((PackedPVS[i] shr 4) and $01) <> 0);
-          UnPackedPVS[Result-5]:=ByteBool(((PackedPVS[i] shr 3) and $01) <> 0);
-          UnPackedPVS[Result-6]:=ByteBool(((PackedPVS[i] shr 2) and $01) <> 0);
-          UnPackedPVS[Result-7]:=ByteBool(((PackedPVS[i] shr 1) and $01) <> 0);
-          UnPackedPVS[Result-8]:=ByteBool((PackedPVS[i] and $01) <> 0);
+          if ((n + 8) > CountPVS) then
+            begin
+              tmp:=PackPtr^;
+              for j:=0 to (CountPVS - n) do
+                begin
+                  UnpackPtr^:=tmp and $01;
+                  tmp:=tmp shr 1;
+                  Inc(UnpackPtr);
+                end;
+              Result:=CountPVS;
+              Exit;
+            end
+          else
+            begin
+              PInteger(UnpackPtr)^:=bitLUT[PackPtr^ and $0F];
+              Inc(UnpackPtr, 4);
+              PInteger(UnpackPtr)^:=bitLUT[(PackPtr^ shr 4) and $0F];
+              Inc(UnpackPtr, 4);
+            end;
+          Inc(n, 8);
         end;
+      Inc(PackPtr);
       Inc(i);
     end;
-
-  SetLength(UnPackedPVS, CountPVS);
+  Result:=n;
   {$R+}
 end;
 

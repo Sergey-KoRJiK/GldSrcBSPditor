@@ -1,6 +1,7 @@
 unit UnitBrushModel;
 
 // Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 interface
 
@@ -21,10 +22,11 @@ const
   );
 
 type tBrushModel = packed record
-    BBOXf: tBBOXf;
+    vMin: tVec3f;
+    vMax: tVec3f;
     Origin: tVec3f;
     iHull: array[0..MAX_HULLS-1] of Integer;
-    nVisLeafs: Integer;
+    nVisLeafs: Integer; // Count visleaf for local Node tree (it's also CountPVS)
     iFirstFace, nFaces: Integer;
   end;
 type PBrushModel = ^tBrushModel;
@@ -32,10 +34,12 @@ type ABrushModel = array of tBrushModel;
 
 type tBrushModelExt = record
     BaseBModel: tBrushModel;
-    isBrushWithEntityOrigin: Boolean;
-    Origin: tVec3f;
+    Origin: tVec4f;
+    ShiftBBOX4f: tBBOX4f;
     EntityId: Integer;
     iLastFace: Integer;
+    isBrushWithEntityOrigin: Boolean;
+    isAAATrigger: Boolean;
   end;
 type PBrushModelExt = ^tBrushModelExt;
 type ABrushModelExt = array of tBrushModelExt;
@@ -51,9 +55,10 @@ procedure FreeBrushModelExt(const lpBrushModelExt: PBrushModelExt);
 begin
   {$R-}
   lpBrushModelExt.isBrushWithEntityOrigin:=False;
-  lpBrushModelExt.Origin:=VEC_ZERO;
+  lpBrushModelExt.Origin:=VEC_ZERO_4F;
   lpBrushModelExt.EntityId:=0;
   lpBrushModelExt.iLastFace:=-1;
+  lpBrushModelExt.ShiftBBOX4f:=BBOX_ZERO_4F;
   {$R+}
 end;
 

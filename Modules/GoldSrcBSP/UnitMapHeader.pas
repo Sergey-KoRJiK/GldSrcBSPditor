@@ -1,6 +1,7 @@
 unit UnitMapHeader;
 
 // Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 interface
 
@@ -9,7 +10,6 @@ uses
   UnitUserTypes,
   {}
   UnitEntity,
-  UnitPlane,
   UnitTexture,
   UnitNode,
   UnitFace,
@@ -100,7 +100,7 @@ begin
       '# NODES         #' + ShowElement(LumpsInfo[LUMP_NODES], SizeOf(tNode)) +
       '# TEXINFO       #' + ShowElement(LumpsInfo[LUMP_TEXINFO], SizeOf(tTexInfo)) +
       '# FACES         #' + ShowElement(LumpsInfo[LUMP_FACES], SizeOf(tFace)) +
-      '# LIGHTING      #' + ShowElement(LumpsInfo[LUMP_LIGHTING], SizeOf(tRGB888)) +
+      '# LIGHTMAPS     #' + ShowElement(LumpsInfo[LUMP_LIGHTING], SizeOf(tRGB888)) +
       '# CLIP NODES    #' + ShowElement(LumpsInfo[LUMP_CLIPNODES], SizeOf(tClipNode)) +
       '# LEAVES        #' + ShowElement(LumpsInfo[LUMP_LEAVES], SizeOf(tVisLeaf)) +
       '# MARKSURFACES  #' + ShowElement(LumpsInfo[LUMP_MARKSURFACES], SizeOf(tMarkSurface)) +

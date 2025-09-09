@@ -1,6 +1,7 @@
 unit UnitEntity;
 
 // Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 interface
 
@@ -28,8 +29,8 @@ type tEntity = packed record
     TargetName: String;
     BrushModel: Integer; // if 0 -> no Brush Entity
     VisLeaf: Integer; // if 0 -> no have origin
-    Origin: tVec3f; // if VisLeaf = 0 then not used
-    Angles: tVec3f;
+    Origin: tVec4f; // if VisLeaf = 0 then not used
+    Angles: tVec4f;
   end;
 type PEntity = ^tEntity;
 type AEntity = array of tEntity;
@@ -38,7 +39,7 @@ type AEntity = array of tEntity;
 const
   KeyOrigin = 'origin';
   KeyAngles = 'angles';
-  KeyTargetName = 'target';
+  KeyTargetName = 'targetname';
   KeyClassName = 'classname';
   //
   KeyLightStyle = 'style';
@@ -50,6 +51,11 @@ const
   //
   KeyMaxRange = 'maxrange';
   KeySkyName = 'skyname';
+  //
+  KeyRenderFX = 'renderfx';
+  KeyRenderMode = 'rendermode';
+  KeyFXAmount = 'renderamt';
+  KeyFXColor = 'rendercolor';
 
 
 
@@ -68,6 +74,8 @@ function FindEntityByClassName(const Entities: PEntity; const Count: Integer;
   const ClassNameKey: String): Integer;
 function FindEntityByTargetName(const Entities: PEntity; const Count: Integer;
   const TargetNameKey: String): Integer;
+function FindEntityByBModelIndex(const Entities: PEntity; const Count: Integer;
+  const BModelIndex: Integer): Integer;
 
 
 implementation
@@ -82,6 +90,7 @@ begin
     begin
       if (S[i] = #$0D) then S[i]:=#$20;
     end;
+  S[SizeS-1]:=#$0A;
   {$R+}
 end;
 
@@ -101,6 +110,7 @@ begin
     begin
       if (EntityData[i] = #$0A) then Inc(RowCount);
     end;
+  //if (EntityData[SizeEntityData] = #$00) then Inc(RowCount);
 
   if (RowCount <= 1) then
     begin
@@ -110,7 +120,7 @@ begin
 
   SetLength(RowIndex, RowCount);
   j:=0;
-  for i:=0 to (SizeEntityData - 1) do
+  for i:=1 to SizeEntityData do
     begin
       if (EntityData[i] = #$0A) then
         begin
@@ -121,7 +131,7 @@ begin
 
   DebugStr:=StringReplace(Copy(EntityData, 0, RowIndex[0]), #$0A, '', [rfReplaceAll]);
   Result.Append(DebugStr);
-  for i:=0 to (RowCount - 2) do
+  for i:=0 to (RowCount - 1) do
     begin
       DebugStr:=StringReplace(
         Copy(EntityData, RowIndex[i], RowIndex[i + 1] - RowIndex[i]), #$0A, '', [rfReplaceAll]);
@@ -201,9 +211,10 @@ begin
           if (RawList.Strings[i] = '{') then Inc(BraCount);
           if (RawList.Strings[i] = '}') then Inc(KetCount);
         end;
-      if (BraCount <> KetCount) then Exit;
-      if (BraCount = 0) then Exit;
+      //if (BraCount <> KetCount) then Exit;
       Result:=BraCount;
+      if (KetCount > BraCount) then Result:=KetCount;
+      if (Result = 0) then Exit;
 
       SetLength(Entities, Result);
       SetLength(BraIndecies, Result);
@@ -373,6 +384,31 @@ begin
   for i:=1 to (Count - 1) do
     begin
       if (AEntity(Entities)[i].TargetName = LowerCase(TargetNameKey)) then
+        begin
+          Result:=i;
+          Exit;
+        end;
+    end;
+  Result:=-1;
+  {$R+}
+end;
+
+function FindEntityByBModelIndex(const Entities: PEntity; const Count: Integer;
+  const BModelIndex: Integer): Integer;
+var
+  i: Integer;
+begin
+  {$R-}
+  if (BModelIndex < 1) then
+    begin
+      // BModelIndex can't be negative, also BModelIndex = 0 is worldspawn
+      Result:=-1;
+      Exit;
+    end;
+
+  for i:=1 to (Count - 1) do
+    begin
+      if (AEntity(Entities)[i].BrushModel = BModelIndex) then
         begin
           Result:=i;
           Exit;

@@ -1,6 +1,7 @@
 unit UnitFace;
 
 // Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 interface
 
@@ -13,12 +14,11 @@ uses
   UnitOpenGLext,
   UnitUserTypes,
   UnitVec,
-  UnitPlane,
   UnitTexture;
 
 type tFace = packed record
     iPlane: WORD;
-    nPlaneSides: WORD;
+    nPlaneSide: WORD;     // if non-zero, then inverse plane normal direction
     iFirstSurfEdge: DWORD;
     nSurfEdges: WORD;
     iTextureInfo: WORD;
@@ -28,11 +28,12 @@ type tFace = packed record
 type PFace = ^tFace;
 type AFace = array of tFace;
 
+
 type tFaceExt = record
     BaseFace: tFace;
     //
-    LmpSize: TPoint;
-    LmpSquare: Integer;   // LmpSize.X*LmpSize.Y
+    LmpSize, LmpMin, LmpMax: tVec2s;
+    LmpSquare: Integer;   // LmpSize.x*LmpSize.y
     CountLightStyles: Integer;
     CountLightmaps: Integer; // = LmpSquare*CountLightStyles
     //
@@ -48,12 +49,11 @@ type tFaceExt = record
     Wad3TextureIndex: Integer;
     TexName: PTexName;
     //
-    PlaneAxisType: Integer;
     PlaneIndex: Integer;
     Polygon: tPolygon3f; // Plane, Vertecies, BBOX, VertexCount
     TexCoords: AVec2f;
     LmpCoords: AVec2f;
-    LmpMegaCoords: AVec3f;
+    LmpMegaCoords: AVec2f;
     TexBBOX: tTexBBOXf;
     //
     isDummyLightmaps: Boolean;
@@ -67,6 +67,7 @@ type AFaceExt = array of tFaceExt;
 procedure FreeFaceExt(const lpFaceExt: PFaceExt);
 procedure PreRenderFaces(const bEnableVertex, bEnableBaseTex, bEnableLmpTex: Boolean);
 procedure RenderFaceVertexOnly(const lpFaceExt: PFaceExt);
+procedure RenderFaceContourOnly(const lpFaceExt: PFaceExt);
 procedure RenderFaceCustomColor4f(const lpFaceExt: PFaceExt; const CustomColor4fv: PGLfloat);
 procedure RenderFaceLmpBT(const lpFaceExt: PFaceExt; const iStyle: Integer);
 procedure RenderFaceLmp(const lpFaceExt: PFaceExt; const iStyle: Integer);
@@ -98,7 +99,6 @@ begin
   lpFaceExt.Wad3TextureIndex:=0;
   lpFaceExt.TexName:=nil;
   //
-  lpFaceExt.PlaneAxisType:=PLANE_ANY_Z;
   lpFaceExt.PlaneIndex:=0;
   FreePolygon(@lpFaceExt.Polygon);
   SetLength(lpFaceExt.TexCoords, 0);
@@ -137,11 +137,23 @@ procedure RenderFaceVertexOnly(const lpFaceExt: PFaceExt);
 begin
   {$R-}
   glVertexPointer(
-    3, GL_FLOAT, 0,
+    3, GL_FLOAT, SizeOf(tVec4f),
     @lpFaceExt.Polygon.Vertecies[0].x
   );
   //
   glDrawArrays(GL_TRIANGLE_FAN, 0, lpFaceExt.Polygon.CountVertecies);
+  {$R+}
+end;
+
+procedure RenderFaceContourOnly(const lpFaceExt: PFaceExt);
+begin
+  {$R-}
+  glVertexPointer(
+    3, GL_FLOAT, SizeOf(tVec4f),
+    @lpFaceExt.Polygon.Vertecies[0].x
+  );
+  //
+  glDrawArrays(GL_LINE_LOOP, 0, lpFaceExt.Polygon.CountVertecies);
   {$R+}
 end;
 
@@ -152,7 +164,7 @@ begin
   glColor4fv(CustomColor4fv);
   //
   glVertexPointer(
-    3, GL_FLOAT, 0,
+    3, GL_FLOAT, SizeOf(tVec4f),
     @lpFaceExt.Polygon.Vertecies[0].x
   );
   //
@@ -165,7 +177,7 @@ begin
   {$R-}
   glColor4fv(@lpFaceExt.RenderColor[0]);
   glVertexPointer(
-    3, GL_FLOAT, 0,
+    3, GL_FLOAT, SizeOf(tVec4f),
     @lpFaceExt.Polygon.Vertecies[0].x
   );
   glClientActiveTextureARB(GL_TEXTURE0);
@@ -175,7 +187,7 @@ begin
   );
   glClientActiveTextureARB(GL_TEXTURE1);
   glTexCoordPointer(
-    3, GL_FLOAT, 0,
+    2, GL_FLOAT, 0,
     @lpFaceExt.LmpMegaCoords[iStyle*lpFaceExt.Polygon.CountVertecies]
   );
   glDrawArrays(GL_TRIANGLE_FAN, 0, lpFaceExt.Polygon.CountVertecies);
@@ -187,12 +199,12 @@ begin
   {$R-}
   glColor4fv(@lpFaceExt.RenderColor[0]);
   glVertexPointer(
-    3, GL_FLOAT, 0,
+    3, GL_FLOAT, SizeOf(tVec4f),
     @lpFaceExt.Polygon.Vertecies[0].x
   );
   glClientActiveTextureARB(GL_TEXTURE1);
   glTexCoordPointer(
-    3, GL_FLOAT, 0,
+    2, GL_FLOAT, 0,
     @lpFaceExt.LmpMegaCoords[iStyle*lpFaceExt.Polygon.CountVertecies]
   );
   glDrawArrays(GL_TRIANGLE_FAN, 0, lpFaceExt.Polygon.CountVertecies);
@@ -204,7 +216,7 @@ begin
   {$R-}
   glColor4fv(@lpFaceExt.RenderColor[0]);
   glVertexPointer(
-    3, GL_FLOAT, 0,
+    3, GL_FLOAT, SizeOf(tVec4f),
     @lpFaceExt.Polygon.Vertecies[0].x
   );
   glClientActiveTextureARB(GL_TEXTURE0);

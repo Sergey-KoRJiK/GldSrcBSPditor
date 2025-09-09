@@ -1,6 +1,7 @@
 unit UnitTexture;
 
 // Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 interface
 
@@ -101,10 +102,10 @@ const
   TEXNAMEINDEX_AAATRIGGER = 0;
 
 
-procedure AllocTexture(var Texture: tWad3Texture);
-procedure AllocPalette(var Texture: tWad3Texture);
-procedure FreeTextureAndPalette(var Texture: tWad3Texture);
-procedure FreeTextureLump(var TextureLump: tTextureLump);
+procedure AllocTexture(const Texture: PWad3Texture);
+procedure AllocPalette(const Texture: PWad3Texture);
+procedure FreeTextureAndPalette(const Texture: PWad3Texture);
+procedure FreeTextureLump(const TextureLump: PTextureLump);
 
 // only with MipMapLevel = 0 internal palette is updated
 function UpdateTextureFromBitmap(const FileName: String; const lpTexture: PWad3Texture;
@@ -144,7 +145,7 @@ procedure GetTexureCoordST(const Point: tVec3f; const TexInfo: tTexInfo; const T
 implementation
 
 
-procedure AllocTexture(var Texture: tWad3Texture);
+procedure AllocTexture(const Texture: PWad3Texture);
 begin
   {$R-}
   Texture.MipWidth[0]:=Texture.nWidth;
@@ -183,14 +184,14 @@ begin
   {$R+}
 end;
 
-procedure AllocPalette(var Texture: tWad3Texture);
+procedure AllocPalette(const Texture: PWad3Texture);
 begin
   {$R-}
   Texture.Palette:=SysGetMem(Texture.PaletteColors*SizeOf(tRGB888));
   {$R+}
 end;
 
-procedure FreeTextureAndPalette(var Texture: tWad3Texture);
+procedure FreeTextureAndPalette(const Texture: PWad3Texture);
 begin
   {$R-}
   if (Texture.MipData[0] <> nil) then
@@ -228,7 +229,7 @@ begin
   {$R+}
 end;
 
-procedure FreeTextureLump(var TextureLump: tTextureLump);
+procedure FreeTextureLump(const TextureLump: PTextureLump);
 var
   i: Integer;
 begin
@@ -236,7 +237,7 @@ begin
   TextureLump.nCountTextures:=0;
   for i:=0 to (Length(TextureLump.Wad3Textures) - 1) do
     begin
-      FreeTextureAndPalette(TextureLump.Wad3Textures[i]);
+      FreeTextureAndPalette(@TextureLump.Wad3Textures[i]);
     end;
   SetLength(TextureLump.Wad3Textures, 0);
   TextureLump.Wad3Textures:=nil;
@@ -553,7 +554,7 @@ begin
       Exit;
     end;
 
-  FreeTextureLump(Lump^);
+  FreeTextureLump(Lump);
   Lump.nCountTextures:=i;
   SetLength(Lump.Wad3Textures, Lump.nCountTextures);
   k:=0;
@@ -574,7 +575,7 @@ begin
       Lump.Wad3Textures[k].MipData[0]:=nil;
       if (Lump.Wad3Textures[k].nOffsets[0] = MIPTEX_SIZE) then
         begin
-          AllocTexture(Lump.Wad3Textures[k]);
+          AllocTexture(@Lump.Wad3Textures[k]);
           // Read Pixel-Index Data
           BlockRead(Wad3File, (Lump.Wad3Textures[k].MipData[0])^, Lump.Wad3Textures[k].MipSize[0]);
           BlockRead(Wad3File, (Lump.Wad3Textures[k].MipData[1])^, Lump.Wad3Textures[k].MipSize[1]);
@@ -582,7 +583,7 @@ begin
           BlockRead(Wad3File, (Lump.Wad3Textures[k].MipData[3])^, Lump.Wad3Textures[k].MipSize[3]);
           // Read Palette
           BlockRead(Wad3File, (@Lump.Wad3Textures[k].PaletteColors)^, SizeOf(Word));
-          AllocPalette(Lump.Wad3Textures[k]);
+          AllocPalette(@Lump.Wad3Textures[k]);
           BlockRead(Wad3File, (Lump.Wad3Textures[k].Palette)^,
             Lump.Wad3Textures[k].PaletteColors*SizeOf(tRGB888)
           );
