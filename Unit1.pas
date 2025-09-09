@@ -18,6 +18,8 @@ uses
   ComCtrls,
   ExtCtrls,
   StdCtrls,
+  Grids,
+  ValEdit,
   {}
   Math,
   OpenGL,
@@ -39,7 +41,6 @@ uses
   UnitMapHeader,
   UnitBSPstruct,
   UnitEntity,
-  UnitPlane,
   UnitTexture,
   UnitNode,
   UnitFace,
@@ -48,7 +49,7 @@ uses
   UnitMarkSurface,
   UnitEdge,
   UnitBrushModel,
-  UnitLightEntity, Grids, ValEdit;
+  UnitLightEntity;
 
 type
   TMainForm = class(TForm)
@@ -139,6 +140,61 @@ type
     OpenDialogWAD3: TOpenDialog;
     ExportTextureLumpWAD3: TMenuItem;
     SaveDialogWAD3: TSaveDialog;
+    GroupBoxFacePlane: TGroupBox;
+    LabelFacePlaneX: TStaticText;
+    EditFacePlaneX: TStaticText;
+    LabelFacePlaneY: TStaticText;
+    EditFacePlaneY: TStaticText;
+    LabelFacePlaneZ: TStaticText;
+    EditFacePlaneZ: TStaticText;
+    LabelFacePlaneD: TStaticText;
+    EditFacePlaneD: TStaticText;
+    LabelFacePlaneF: TStaticText;
+    EditFacePlaneF: TStaticText;
+    EditFaceEntityName: TStaticText;
+    EditFaceEntityClass: TStaticText;
+    LabeTexIndex: TStaticText;
+    EditTexIndex: TStaticText;
+    DrawFaceContourMenu: TMenuItem;
+    GroupBoxFaceTexInfo: TGroupBox;
+    LabelFaceTexSx: TStaticText;
+    EditFaceTexSx: TStaticText;
+    LabelFaceTexSy: TStaticText;
+    EditFaceTexSy: TStaticText;
+    LabelFaceTexSz: TStaticText;
+    EditFaceTexSz: TStaticText;
+    LabelFaceTexSShift: TStaticText;
+    EditFaceTexSShift: TStaticText;
+    LabelFaceTexTx: TStaticText;
+    EditFaceTexTx: TStaticText;
+    LabelFaceTexTy: TStaticText;
+    EditFaceTexTy: TStaticText;
+    LabelFaceTexTz: TStaticText;
+    EditFaceTexTz: TStaticText;
+    LabelFaceTexTShift: TStaticText;
+    EditFaceTexTShift: TStaticText;
+    LabelFaceTexFlags: TStaticText;
+    EditFaceTexFlags: TStaticText;
+    GroupBoxProfile: TGroupBox;
+    LabelProfile1: TStaticText;
+    LabelProfile2: TStaticText;
+    LabelProfile3: TStaticText;
+    LabelProfile4: TStaticText;
+    LabelProfile5: TStaticText;
+    LabelProfile6: TStaticText;
+    ShowFaceVertexHistogramMenu: TMenuItem;
+    GroupBoxFaceTexel: TGroupBox;
+    LabelFaceTexUV: TStaticText;
+    EditFaceTexUV: TStaticText;
+    LabelFaceLmpUV: TStaticText;
+    EditFaceLmpUV: TStaticText;
+    TexPixelModeMenu: TMenuItem;
+    DrawEntityBrushesMenu: TMenuItem;
+    ButtonDeleteLmp: TButton;
+    ButtonAddLmp: TButton;
+    ShowLightStylesMenu: TMenuItem;
+    SaveDialogDir: TSaveDialog;
+    ButtonDeleteTex: TButton;
     function TestRequarementExtensions(): Boolean;
     procedure InitGL();
     procedure GetVisleafRenderList();
@@ -156,7 +212,6 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure FormResize(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure HelpMenuClick(Sender: TObject);
@@ -205,9 +260,18 @@ type
     procedure DrawTriggersMenuClick(Sender: TObject);
     procedure ImportWAD3MenuClick(Sender: TObject);
     procedure ExportTextureLumpWAD3Click(Sender: TObject);
+    procedure DrawFaceContourMenuClick(Sender: TObject);
+    procedure ShowFaceVertexHistogramMenuClick(Sender: TObject);
+    procedure TexPixelModeMenuClick(Sender: TObject);
+    procedure DrawEntityBrushesMenuClick(Sender: TObject);
+    procedure ButtonDeleteLmpClick(Sender: TObject);
+    procedure ButtonAddLmpClick(Sender: TObject);
+    procedure ShowLightStylesMenuClick(Sender: TObject);
+    procedure ButtonDeleteTexClick(Sender: TObject);
   private
     RenderContext: CRenderingContextManager;
     RenderTimer: CRenderTimerManager;
+    ProfileTimer: CQueryPerformanceTimer;
     Camera: CFirtsPersonViewCamera;
     WorkArea: TRect;
     RenderRange: GLfloat;
@@ -239,12 +303,11 @@ const
   //
   ClearColor: tColor4fv = (0.01, 0.01, 0.01, 0.0);
   LeafRenderColor: tColor4fv = (0.1, 0.1, 0.7, 1.0);
-  LeafRenderSecondColor: tColor4fv = (0.1, 0.7, 0.1, 0.1);
+  LeafRenderSecondColor: tColor4fv = (0.1, 0.7, 0.1, 0.4);
   //
   FACEDRAW_ALL                = $00;
   FACEDRAW_LIGHTMAP_ONLY      = $01;
   FACEDRAW_BASETEXTURE_ONLY   = $02;
-  FACEDRAW_DISABLE = FACEDRAW_ALL or FACEDRAW_LIGHTMAP_ONLY or FACEDRAW_BASETEXTURE_ONLY;
   //
   HelpStr: String = 'Rotate Camera: Left Mouse Button' + LF +
     'Move Camera forward/backward: keys W/S' + LF +
@@ -254,10 +317,11 @@ const
     'Change Lightmap Style Page: key F' + LF +
     'Additional info showed in bottom Status Bar';
   AboutStr: String = 'Copyright (c) 2020 Sergey-KoRJiK, Belarus' + LF +
-    'GoldSrc BSP Editor' + LF +
-    'Program version: 1.3.0' + LF +
+    'github.com/Sergey-KoRJiK' + LF +
+    'GoldSrc BSP Editor and Viewer' + LF +
+    'Program version: 1.4.1' + LF +
     'Version of you OpenGL: ';
-  MainFormCaption: String = 'GoldSrc BSP Editor';
+  MainFormCaption: String = 'GoldSrc BSP Editor and Viewer';
 
 
 var
@@ -272,6 +336,8 @@ var
   CurrCollisionDepth: Integer;
   CurrCollisionFlag: Integer;
   CurrSlidePlaneId: Integer;
+  PrevClipPlaneId: Integer = -1;
+  CurrClipPlaneId: Integer = -1;
   CollisionInfo: tCollisionInfo;
   //
   // Render VisLeaf options
@@ -284,6 +350,7 @@ var
   SelectedStyle: Integer = 0;
   SelectedMipmap: Integer = 0;
   CurrFaceExt: PFaceExt = nil;
+  TraceInfo: tTraceInfo;
   //
   LightmapMegatexture: CMegatextureManager;
   BasetextureMng: CBasetextureManager;
@@ -305,6 +372,8 @@ implementation
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   {$R-}
+  Self.ProfileTimer:=CQueryPerformanceTimer.CreateTimer();
+
   Self.Caption:=MainFormCaption;
   Self.KeyPreview:=True;
   Self.isLeftMouseClicked:=False;
@@ -343,6 +412,7 @@ begin
       ShowMessage('Error create OpenGL context!');
       Self.RenderContext.DeleteRenderingContext();
       Self.RenderContext.DeleteManager();
+      Self.ProfileTimer.DeleteTimer();
       Application.ShowMainForm:=False;
       Application.Terminate;
     end;
@@ -366,11 +436,13 @@ begin
     begin
       ShowMessage('Error: Current system OpenGL version: '
         + OpenGLVersionShort + '; Requarement minimum version: 1.3');
+      Self.ProfileTimer.DeleteTimer();
       Application.ShowMainForm:=False;
       Application.Terminate();
     end;
   if (Self.TestRequarementExtensions() = False) then
     begin
+      Self.ProfileTimer.DeleteTimer();
       Application.ShowMainForm:=False;
       Application.Terminate();
     end;
@@ -519,7 +591,7 @@ begin
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Support load textures per byte
   glPixelStorei(GL_PACK_ALIGNMENT, 1); // Support save textures per byte
 
-  glDepthMask ( GL_TRUE ); // Enable Depth Test
+  glDepthMask(GL_TRUE); // Enable Depth Test
   glDepthFunc(GL_LEQUAL);  // type of Depth Test
   glEnable(GL_NORMALIZE); // automatic Normalize
 
@@ -553,10 +625,9 @@ begin
   {$R-}
   if (isBspLoad) then
     begin
-      CameraLeafId:=GetLeafIndexByPoint(
-        @Map.NodeExtList[0],
-        Self.Camera.ViewPosition,
-        Map.RootNodeIndex
+      CameraLeafId:=GetLeafIndexByPointAsm(
+        @Map.NodeExtList[Map.RootNodeIndex],
+        Self.Camera.ViewPosition
       );
       FaceOcclusion:=Boolean(CameraLeafId > 0);
 
@@ -566,13 +637,6 @@ begin
           Self.LabelCameraLeafId.Caption:='Camera in Leaf: ' + IntToStr(CameraLeafId);
 
           Inc(RenderFrameIterator);
-          if (RenderFrameIterator = 255) then
-            begin
-              RenderFrameIterator:=0;
-              FillChar255(@FacesIndexToRender[0], Map.CountFaces);
-              FillChar255(@BrushIndexToRender[0], Map.CountBrushModels);
-            end;
-
           if (CameraLeafId > 0) then
             begin
               // Update visibility flags of VisLeafs
@@ -585,104 +649,88 @@ begin
             end
           else
             begin
-              if (FaceOcclusion = False) then
-                begin
-                  FillChar(FacesIndexToRender[0], Map.CountFaces, RenderFrameIterator);
-                  FillChar(BrushIndexToRender[0], Map.CountBrushModels, RenderFrameIterator);
-                end;
+              // Call only when camera go out from map, mean from leaf to space,
+              FillChar(FacesIndexToRender[0], Map.CountFaces, RenderFrameIterator);
+              FillChar(BrushIndexToRender[0], Map.CountBrushModels, RenderFrameIterator);
             end; //}
-
           CameraLastLeafId:=CameraLeafId;
+          Self.GetFaceRenderList();
         end;
-      Self.GetFaceRenderList();
     end;
   {$R+}
 end;
 
 procedure TMainForm.GetFaceRenderList();
 var
-  i, j, k: Integer;
+  i, j: Integer;
   tmpVisLeaf: PVisLeafExt;
-  tmpBrushModelExt: PBrushModelExt;
 begin
   {$R-}
+  Self.ProfileTimer.TimerStart();
   if (FaceOcclusion) then
     begin
-      if (TestPointInBBOX(Map.MapBBOX, Self.Camera.ViewPosition)) then
-        begin
-          BrushIndexToRender[0]:=RenderFrameIterator;
-        end;
-    end
-  else
-    begin
-      BrushIndexToRender[0]:=RenderFrameIterator;
-    end;
-
-  for i:=0 to (lpCameraLeaf.CountPVS - 1) do
-    begin
-      // For each VisLeaf on Map
-      tmpVisLeaf:=@Map.VisLeafExtList[i + 1];
-
-      if (FaceOcclusion) then
+      for i:=0 to (lpCameraLeaf.CountPVS - 1) do
         begin
           // For each visible VisLeaf for lpCameraLeaf by PVS Table
           if (LeafIndexToRender[i] <> RenderFrameIterator) then Continue;
-        end;  
 
-      // 1. Get visible World Brush faces for tmpVisLeaf
-      for j:=0 to (tmpVisLeaf.BaseLeaf.nMarkSurfaces - 1) do
-        begin
-          FacesIndexToRender[tmpVisLeaf.WFaceIndexes[j]]:=RenderFrameIterator;
-        end;
-
-      // 2. Get visible Entity Brushes faces
-      for j:=1 to (Map.CountBrushModels - 1) do
-        begin
-          tmpBrushModelExt:=@Map.BrushModelExtList[j];
-          if (TestIntersectionTwoBBOXOffset(tmpBrushModelExt.BaseBModel.BBOXf,
-            tmpVisLeaf.BBOXf, tmpBrushModelExt.Origin) = False) then Continue;  //}
-
-          BrushIndexToRender[j]:=RenderFrameIterator;
-          for k:=tmpBrushModelExt.BaseBModel.iFirstFace to tmpBrushModelExt.iLastFace do
+          // For each VisLeaf on Map
+          // 1. Get visible World Brush faces for tmpVisLeaf
+          tmpVisLeaf:=@Map.VisLeafExtList[i + 1];
+          for j:=0 to (tmpVisLeaf.CountWFaces - 1) do
             begin
-              FacesIndexToRender[k]:=RenderFrameIterator;
+              FacesIndexToRender[tmpVisLeaf.WFaceIndexes[j]]:=RenderFrameIterator;
             end; //}
-        end;
-    end; // End For each VisLeaf on Map
 
-  if (Self.DrawTriggersMenu.Checked = False) then
-    begin
-      for i:=0 to (Map.CountFaces - 1) do
-        begin
-          if (Map.FaceExtList[i].isTriggerTexture
-            and (FacesIndexToRender[i] = RenderFrameIterator)) then
+          // 2. Get visible Entity Brushes for tmpVisLeaf
+          if (Self.DrawEntityBrushesMenu.Checked = False) then Continue;
+          for j:=0 to (tmpVisLeaf.CountBModels - 1) do
             begin
-              FacesIndexToRender[i]:=not RenderFrameIterator;
+              BrushIndexToRender[tmpVisLeaf.BModelIndexes[j]]:=RenderFrameIterator;
+            end;
+        end; // End For each VisLeaf on Map
+    end;
+    
+  // Hide Triggers
+  if (not (Self.DrawTriggersMenu.Checked and Self.DrawEntityBrushesMenu.Checked)) then
+    begin
+      for i:=0 to (Map.CountBrushModels - 1) do
+        begin
+          if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
+          if (Map.BrushModelExtList[i].isAAATrigger) then
+            begin
+              BrushIndexToRender[i]:=not RenderFrameIterator;
             end;
         end;
     end;
+  Self.ProfileTimer.TimerStop();
+  Self.LabelProfile1.Caption:='FaceVis '
+    + Self.ProfileTimer.GetStringMcsInterval();
   {$R+}
 end;
 
 procedure TMainForm.CollisionProcess();
 var
   i: Integer;
-  tmpVec: tVec3f;
+  tmpVec: tVec4f;
   tmpStr: String;
-  CurrPlane: PPlaneBSP;
+  minDist: Single;
 begin
   {$R-}
   if ((isBSPLoad = False) or (Self.CollisionMenu.Checked = False)) then Exit;
 
+  CurrClipPlaneId:=-1;
+  minDist:=FLOAT32_INF_POSITIVE;
+  tmpVec.w:=0;
   for i:=0 to (Map.CountBrushModels - 1) do
     begin
       if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
       
-      tmpVec.x:=Self.Camera.ViewPosition.x +
+      tmpVec.x:=Self.Camera.ViewPosition.x -
         Map.BrushModelExtList[i].BaseBModel.Origin.x;
-      tmpVec.y:=Self.Camera.ViewPosition.y +
+      tmpVec.y:=Self.Camera.ViewPosition.y -
         Map.BrushModelExtList[i].BaseBModel.Origin.y;
-      tmpVec.z:=Self.Camera.ViewPosition.z +
+      tmpVec.z:=Self.Camera.ViewPosition.z -
         Map.BrushModelExtList[i].BaseBModel.Origin.z;
 
       GetCollisionInfo(
@@ -690,17 +738,38 @@ begin
         @Map.ClipNodeExtList[Map.BrushModelExtList[i].BaseBModel.iHull[1]],
         tmpVec,
       );
+      if (minDist > CollisionInfo.fDistCanditate) then
+        begin
+          minDist:=CollisionInfo.fDistCanditate;
+          CurrClipPlaneId:=CollisionInfo.iClipCandidate;
+        end;
 
       if (CollisionInfo.State = CLIPCONTEST_SOLID) then Break;
     end;
-
+  {something work wrong
+  ... we want two variables for State each render frame: 
+   1) prev value CollisionInfo.State
+   2) next value CollisionInfo.State
+  Then if:
+   a) prev = EMPTY & next = SOLID, then "hit"
+   b) prev = EMPTY & next = EMPTY, no "hit"
+   c) prev = SOLID & next = SOLID, then we "stuck" and need step back
+   d) prev = SOLID è next = EMPTY, then we "unstuck" from (c)
+   
+  (a): when it happen, we correct our trajectory and do collision test again
+       until we got case (b), and we must never happen in cases (c,d)
+   What i need do? what is efficitve alghorithm.. ?//}
   tmpStr:='List: ';
-  if (CollisionInfo.State = CLIPCONTEST_EMPTY) then tmpStr:='No, List: ';
-  if (CollisionInfo.State = CLIPCONTEST_SOLID) then tmpStr:='Yes, List: ';
-  for i:=0 to (CollisionInfo.Depth - 1) do
+  if (CollisionInfo.State = CLIPCONTEST_EMPTY) then tmpStr:='No';
+  if (CollisionInfo.State = CLIPCONTEST_SOLID) then tmpStr:='Yes';
+  if ((CurrClipPlaneId < 0) and (PrevClipPlaneId >= 0)) then
     begin
-      CurrPlane:=@Map.ClipNodeExtList[CollisionInfo.iClipList[i]].Plane;
-      tmpStr:=tmpStr +  PlaneToStr(CurrPlane^) + '; ';
+      tmpStr:=tmpStr + ', Plane:'
+        + PlaneToStr(Map.ClipNodeExtList[PrevClipPlaneId].Plane);
+    end
+  else
+    begin
+      PrevClipPlaneId:=CurrClipPlaneId;
     end;
   Self.Caption:=tmpStr;
   {$R+}
@@ -718,37 +787,82 @@ end;
 
 procedure TMainForm.GetFaceIndexByRay();
 var
-  i: Integer;
-  Dist: GLfloat;
-  uvt: tVec3f;
+  i, j: Integer;
+  WDist, EDist: Single;
+  WIndex, EIndex: Integer;
+  WTraceInfo, ETraceInfo: tTraceInfo;
 begin
   {$R-}
   SelectedFaceIndex:=-1;
   CurrFaceExt:=nil;
   if (isBspLoad = False) then Exit;
 
-  Dist:=Self.RenderRange + 1;
+  WDist:=Self.RenderRange + 1;
+  EDist:=WDist;
+  WIndex:=-1;
+  EIndex:=-1;
   // Dist start at value > 0;
   // if Dist = 0, face on zNear plane
   // if Dist < 0, face behind zNear plane, ignore it
   // so, we can use fast integer compare technique for positives Float-32 IEEE-754;
 
-
+  Self.ProfileTimer.TimerStart();
   for i:=0 to (Map.CountFaces - 1) do
     begin
+      // reject non-visible faces by PVS
       if (FacesIndexToRender[i] <> RenderFrameIterator) then Continue;
 
-      if (GetRayPolygonIntersection(@Map.FaceExtList[i].Polygon,
-        Self.MouseRay, @uvt) >= 0) then
+      WTraceInfo.t:=WDist;
+      // Ray-Plane intersection with get intersection point on plane
+      //if (not GetRayPlaneIntersection(
+      if (not GetRayPlaneIntersectionASM(
+                Map.FaceExtList[i].Polygon.Plane,
+                Self.MouseRay,
+                @WTraceInfo)
+          ) then Continue; //}
+      if (not TestPointInsidePolygon(
+                Map.FaceExtList[i].Polygon,
+                WTraceInfo.Point)
+          ) then Continue;
+      WDist:=WTraceInfo.t;
+      WIndex:=i; //}
+    end;
+  if (Self.DrawEntityBrushesMenu.Checked) then
+    begin
+      for i:=1 to (Map.CountBrushModels - 1) do
         begin
-          // Use fast integer compare technique for positives Float-32 IEEE-754;
-          if (PInteger(@uvt.z)^ < PInteger(@Dist)^) then
+          if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
+          for j:=Map.BrushModelExtList[i].BaseBModel.iFirstFace to
+            Map.BrushModelExtList[i].iLastFace do
             begin
-              Dist:=uvt.z;
-              SelectedFaceIndex:=i;
+              ETraceInfo.t:=EDist;
+              if (not GetRayPlaneIntersectionASM(
+                    Map.FaceExtList[j].Polygon.Plane,
+                    Self.MouseRay,
+                    @ETraceInfo)
+              ) then Continue; //}
+              if (not TestPointInsidePolygon(
+                    Map.FaceExtList[j].Polygon,
+                    ETraceInfo.Point)
+              ) then Continue;
+              EDist:=ETraceInfo.t;
+              EIndex:=j;
             end;
         end;
     end;
+  if (EDist < WDist) then
+    begin
+      SelectedFaceIndex:=EIndex;
+      TraceInfo:=ETraceInfo;
+    end
+  else
+    begin
+      SelectedFaceIndex:=WIndex;
+      TraceInfo:=WTraceInfo;
+    end;
+  Self.ProfileTimer.TimerStop();
+  Self.LabelProfile2.Caption:='SelectF '
+    + Self.ProfileTimer.GetStringMcsInterval();
 
   if (SelectedFaceIndex >= 0) then
     begin
@@ -765,7 +879,7 @@ end;
 procedure TMainForm.GenerateLightmapMegatexture();
 var
   i, iVisLeaf, iFace, iStyle, iBrushModel: Integer;
-  tmpSize: TPoint;
+  tmpSize: tVec2s;
   MegaMemError: eMegaMemError;
   lpVisLeafExt: PVisLeafExt;
   lpFaceExt: PFaceExt;
@@ -811,8 +925,8 @@ begin
 
           if (lpFaceExt.isDummyLightmaps) then Continue;
 
-          tmpSize.X:=lpFaceExt.LmpSize.X*lpFaceExt.CountLightStyles;
-          tmpSize.Y:=lpFaceExt.LmpSize.Y;
+          tmpSize.x:=lpFaceExt.LmpSize.x*lpFaceExt.CountLightStyles;
+          tmpSize.y:=lpFaceExt.LmpSize.y;
           if (LightmapMegatexture.IsCanReserveTexture(tmpSize) = False) then
             begin
               LightmapMegatexture.UpdateTextureFromCurrentBuffer();
@@ -872,8 +986,8 @@ begin
 
           if (lpFaceExt.isDummyLightmaps) then Continue;
 
-          tmpSize.X:=lpFaceExt.LmpSize.X*lpFaceExt.CountLightStyles;
-          tmpSize.Y:=lpFaceExt.LmpSize.Y;
+          tmpSize.x:=lpFaceExt.LmpSize.x*lpFaceExt.CountLightStyles;
+          tmpSize.y:=lpFaceExt.LmpSize.y;
           if (LightmapMegatexture.IsCanReserveTexture(tmpSize) = False) then
             begin
               LightmapMegatexture.UpdateTextureFromCurrentBuffer();
@@ -924,7 +1038,7 @@ begin
     end;
 
   LightmapMegatexture.UpdateTextureFromCurrentBuffer();
-  LightmapMegatexture.UnbindMegatexture3D();
+  LightmapMegatexture.UnbindMegatexture2D();
   {$R+}
 end;
 
@@ -974,7 +1088,7 @@ end;
 
 procedure TMainForm.DrawScence(Sender: TObject);
 var
-  i: Integer;
+  i, j: Integer;
 begin
   {$R-}
   Self.RenderTimer.UpdDeltaTime();
@@ -993,11 +1107,9 @@ begin
 
   if (isBspLoad) then
     begin
-      //////////////////////////////////////////////////////////////////////////
-      LightmapMegatexture.UnbindMegatexture3D();
+      LightmapMegatexture.UnbindMegatexture2D();
       BasetextureMng.UnbindBasetexture();
       //
-      glDisable(GL_BLEND);
       glAlphaFunc(GL_GEQUAL, 0.5);
       case (Self.FaceDrawState) of
         FACEDRAW_ALL:
@@ -1006,34 +1118,39 @@ begin
             // Render World Brush Faces
             for i:=0 to (Map.CountFaces - 1) do
               begin
-                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
-                  (Map.FaceExtList[i].BrushId > 0)) then Continue;
+                if (FacesIndexToRender[i] <> RenderFrameIterator) then Continue;
                 //
                 BasetextureMng.BindBasetexture(Map.FaceExtList[i].TexRenderId);
-                LightmapMegatexture.BindMegatexture3D(Map.FaceExtList[i].LmpMegaId);
+                LightmapMegatexture.BindMegatexture2D(Map.FaceExtList[i].LmpMegaId);
                 //
                 if (SelectedStyle < Map.FaceExtList[i].CountLightStyles)
                 then RenderFaceLmpBT(@Map.FaceExtList[i], SelectedStyle)
                 else RenderFaceLmpBT(@Map.FaceExtList[i], 0);
               end;
             // Render EntBrush Faces
-            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
-            for i:=1 to (Map.CountFaces - 1) do
+            if (Self.DrawEntityBrushesMenu.Checked) then
               begin
-                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
-                  (Map.FaceExtList[i].BrushId = 0)) then Continue;
-                //
-                BasetextureMng.BindBasetexture(Map.FaceExtList[i].TexRenderId);
-                LightmapMegatexture.BindMegatexture3D(Map.FaceExtList[i].LmpMegaId);
-                //
-                if (SelectedStyle < Map.FaceExtList[i].CountLightStyles)
-                then RenderFaceLmpBT(@Map.FaceExtList[i], SelectedStyle)
-                else RenderFaceLmpBT(@Map.FaceExtList[i], 0);
+                if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
+                for i:=1 to (Map.CountBrushModels - 1) do
+                  begin
+                    if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
+                    //
+                    for j:=Map.BrushModelExtList[i].BaseBModel.iFirstFace to
+                      Map.BrushModelExtList[i].iLastFace do
+                      begin
+                        BasetextureMng.BindBasetexture(Map.FaceExtList[j].TexRenderId);
+                        LightmapMegatexture.BindMegatexture2D(Map.FaceExtList[j].LmpMegaId);
+                        //
+                        if (SelectedStyle < Map.FaceExtList[j].CountLightStyles)
+                        then RenderFaceLmpBT(@Map.FaceExtList[j], SelectedStyle)
+                        else RenderFaceLmpBT(@Map.FaceExtList[j], 0);
+                      end;
+                  end;
+                if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
               end;
-            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
             //
             PostRenderFaces(True, True, True);
-            LightmapMegatexture.UnbindMegatexture3D();
+            LightmapMegatexture.UnbindMegatexture2D();
             BasetextureMng.UnbindBasetexture();
           end;
         FACEDRAW_LIGHTMAP_ONLY:
@@ -1042,32 +1159,37 @@ begin
             // Render World Brush Faces
             for i:=0 to (Map.CountFaces - 1) do
               begin
-                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
-                  (Map.FaceExtList[i].BrushId > 0)) then Continue;
+                if (FacesIndexToRender[i] <> RenderFrameIterator) then Continue;
                 //
-                LightmapMegatexture.BindMegatexture3D(Map.FaceExtList[i].LmpMegaId);
+                LightmapMegatexture.BindMegatexture2D(Map.FaceExtList[i].LmpMegaId);
                 //
                 if (SelectedStyle < Map.FaceExtList[i].CountLightStyles)
                 then RenderFaceLmp(@Map.FaceExtList[i], SelectedStyle)
                 else RenderFaceLmp(@Map.FaceExtList[i], 0);
               end;
             // Render EntBrush Faces
-            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
-            for i:=1 to (Map.CountFaces - 1) do
+            if (Self.DrawEntityBrushesMenu.Checked) then
               begin
-                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
-                  (Map.FaceExtList[i].BrushId = 0)) then Continue;
-                //
-                LightmapMegatexture.BindMegatexture3D(Map.FaceExtList[i].LmpMegaId);
-                //
-                if (SelectedStyle < Map.FaceExtList[i].CountLightStyles)
-                then RenderFaceLmp(@Map.FaceExtList[i], SelectedStyle)
-                else RenderFaceLmp(@Map.FaceExtList[i], 0);
+                if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
+                for i:=1 to (Map.CountBrushModels - 1) do
+                  begin
+                    if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
+                    //
+                    for j:=Map.BrushModelExtList[i].BaseBModel.iFirstFace to
+                      Map.BrushModelExtList[i].iLastFace do
+                      begin
+                        LightmapMegatexture.BindMegatexture2D(Map.FaceExtList[j].LmpMegaId);
+                        //
+                        if (SelectedStyle < Map.FaceExtList[j].CountLightStyles)
+                        then RenderFaceLmp(@Map.FaceExtList[j], SelectedStyle)
+                        else RenderFaceLmp(@Map.FaceExtList[j], 0);
+                      end;
+                  end;
+                if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
               end;
-            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
             //
             PostRenderFaces(True, False, True);
-            LightmapMegatexture.UnbindMegatexture3D();
+            LightmapMegatexture.UnbindMegatexture2D();
           end;
         FACEDRAW_BASETEXTURE_ONLY:
           begin
@@ -1075,101 +1197,126 @@ begin
             // Render World Brush Faces
             for i:=0 to (Map.CountFaces - 1) do
               begin
-                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
-                  (Map.FaceExtList[i].BrushId > 0)) then Continue;
+                if (FacesIndexToRender[i] <> RenderFrameIterator) then Continue;
                 //
                 BasetextureMng.BindBasetexture(Map.FaceExtList[i].TexRenderId);
                 RenderFaceBT(@Map.FaceExtList[i])
               end;
             // Render EntBrush Faces
-            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
-            for i:=1 to (Map.CountFaces - 1) do
+            if (Self.DrawEntityBrushesMenu.Checked) then
               begin
-                if ((FacesIndexToRender[i] <> RenderFrameIterator) or
-                  (Map.FaceExtList[i].BrushId = 0)) then Continue;
-                //
-                BasetextureMng.BindBasetexture(Map.FaceExtList[i].TexRenderId);
-                RenderFaceBT(@Map.FaceExtList[i])
+                if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_LINE);
+                for i:=1 to (Map.CountBrushModels - 1) do
+                  begin
+                    if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
+                    //
+                    for j:=Map.BrushModelExtList[i].BaseBModel.iFirstFace to
+                      Map.BrushModelExtList[i].iLastFace do
+                      begin
+                        BasetextureMng.BindBasetexture(Map.FaceExtList[j].TexRenderId);
+                        RenderFaceBT(@Map.FaceExtList[j])
+                      end;
+                  end;
+                if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
               end;
-            if (Self.WireframeEntBrushesMenu.Checked) then glPolygonMode(GL_BACK, GL_FILL);
             //
             PostRenderFaces(True, True, False);
             BasetextureMng.UnbindBasetexture();
           end;
-        FACEDRAW_DISABLE:
-          begin
-
-          end;
       end;
-      glEnable(GL_BLEND);
-      glAlphaFunc(GL_GEQUAL, 0.1);
-      //////////////////////////////////////////////////////////////////////////}
-
+      glAlphaFunc(GL_GEQUAL, 0.1); //}
+      
+      //////////////////////////////////////////////////////////////////////////
       // Render Highlight Wireframe for EntBrush Faces
-      if (Self.WireframeHighlighEntBrushesMenu.Checked) then
+      if (Self.WireframeHighlighEntBrushesMenu.Checked and Self.DrawEntityBrushesMenu.Checked) then
         begin
           glPolygonMode(GL_BACK, GL_LINE);
           PreRenderFaces(True, False, False);
-          //
-          for i:=1 to (Map.CountFaces - 1) do
+          for i:=1 to (Map.CountBrushModels - 1) do
             begin
-              if ((FacesIndexToRender[i] <> RenderFrameIterator) or
-                (Map.FaceExtList[i].BrushId = 0)) then Continue;
+              if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
               //
-              RenderFaceCustomColor4f(@Map.FaceExtList[i], @Self.FaceWireframeColor[0]);
+              for j:=Map.BrushModelExtList[i].BaseBModel.iFirstFace to
+                Map.BrushModelExtList[i].iLastFace do
+                begin
+                  RenderFaceCustomColor4f(@Map.FaceExtList[j], @Self.FaceWireframeColor[0]);
+                end;
             end;
-          //
+          PostRenderFaces(True, False, False);
+          glPolygonMode(GL_BACK, GL_FILL);
+        end; //}
+
+      //////////////////////////////////////////////////////////////////////////
+      // Render Faces Edge-Contour in Dark-Gray color
+      if (Self.DrawFaceContourMenu.Checked) then
+        begin
+          glPolygonMode(GL_BACK, GL_LINE);
+          PreRenderFaces(True, False, False);
+          glColor3f(0.5, 0.5, 0.5);
+          for i:=0 to (Map.CountFaces - 1) do
+            begin
+              if (FacesIndexToRender[i] <> RenderFrameIterator) then Continue;
+              RenderFaceContourOnly(@Map.FaceExtList[i]);
+            end;
+          if (Self.DrawEntityBrushesMenu.Checked) then
+            begin
+              for i:=1 to (Map.CountBrushModels - 1) do
+                begin
+                  if (BrushIndexToRender[i] <> RenderFrameIterator) then Continue;
+                  for j:=Map.BrushModelExtList[i].BaseBModel.iFirstFace to
+                    Map.BrushModelExtList[i].iLastFace do
+                    begin
+                      RenderFaceContourOnly(@Map.FaceExtList[j]);
+                    end;
+                end;
+            end;
           PostRenderFaces(True, False, False);
           glPolygonMode(GL_BACK, GL_FILL);
         end;
-      //////////////////////////////////////////////////////////////////////////}
 
       // Render Selected Face
       if (SelectedFaceIndex >= 0) then
         begin
           glEnable(GL_POLYGON_OFFSET);
           PreRenderFaces(True, False, False);
-          //
           RenderFaceCustomColor4f(CurrFaceExt, @Self.FaceSelectedColor[0]);
-          //
           PostRenderFaces(True, False, False);
           glDisable(GL_POLYGON_OFFSET);
         end; //}
 
-
+      //////////////////////////////////////////////////////////////////////////
       // Render "Camera VisLeaf"
-      if ((CameraLeafId > 0) and (Self.RenderBBOXVisLeaf.Checked)) then
+      if ((Self.RenderBBOXVisLeaf.Checked) and (CameraLeafId > 0)) then
         begin
           glPushMatrix();
           glTranslatef(
-            lpCameraLeaf.BBOXf.vMin.x,
-            lpCameraLeaf.BBOXf.vMin.y,
-            lpCameraLeaf.BBOXf.vMin.z
+            lpCameraLeaf.BBOX4f.vMin.x,
+            lpCameraLeaf.BBOX4f.vMin.y,
+            lpCameraLeaf.BBOX4f.vMin.z
           );
           glScalef(
-            lpCameraLeaf.SizeBBOXf.x,
-            lpCameraLeaf.SizeBBOXf.y,
-            lpCameraLeaf.SizeBBOXf.z
+            lpCameraLeaf.SizeBBOX4f.x,
+            lpCameraLeaf.SizeBBOX4f.y,
+            lpCameraLeaf.SizeBBOX4f.z
           );
           glCallList(BaseCubeLeafWireframeList);
           glPopMatrix();
 
           // Render other VisLeafs
-          for i:=1 to lpCameraLeaf.CountPVS do
+          for i:=1 to (lpCameraLeaf.CountPVS - 1) do
             begin
-              if (LeafIndexToRender[i - 1] <> RenderFrameIterator) then Continue;
-              if (i = CameraLeafId) then Continue;
+              if (LeafIndexToRender[i] <> RenderFrameIterator) then Continue;
 
               glPushMatrix();
               glTranslatef(
-                Map.VisLeafExtList[i].BBOXf.vMin.x,
-                Map.VisLeafExtList[i].BBOXf.vMin.y,
-                Map.VisLeafExtList[i].BBOXf.vMin.z
+                Map.VisLeafExtList[i].BBOX4f.vMin.x,
+                Map.VisLeafExtList[i].BBOX4f.vMin.y,
+                Map.VisLeafExtList[i].BBOX4f.vMin.z
               );
               glScalef(
-                Map.VisLeafExtList[i].SizeBBOXf.x,
-                Map.VisLeafExtList[i].SizeBBOXf.y,
-                Map.VisLeafExtList[i].SizeBBOXf.z
+                Map.VisLeafExtList[i].SizeBBOX4f.x,
+                Map.VisLeafExtList[i].SizeBBOX4f.y,
+                Map.VisLeafExtList[i].SizeBBOX4f.z
               );
               glCallList(SecondCubeLeafWireframeList);
               glPopMatrix();
@@ -1179,14 +1326,14 @@ begin
       // Render BBOX of Entity "worldspawn" (total Map BBOX)
       glPushMatrix();
       glTranslatef(
-        Map.MapBBOX.vMin.x,
-        Map.MapBBOX.vMin.y,
-        Map.MapBBOX.vMin.z
+        Map.MapBBOX4f.vMin.x,
+        Map.MapBBOX4f.vMin.y,
+        Map.MapBBOX4f.vMin.z
       );
       glScalef(
-        Map.MapBBOXSize.x,
-        Map.MapBBOXSize.y,
-        Map.MapBBOXSize.z
+        Map.MapBBOX4fSize.x,
+        Map.MapBBOX4fSize.y,
+        Map.MapBBOX4fSize.z
       );
       glCallList(SecondCubeLeafWireframeList);
       glPopMatrix();
@@ -1212,21 +1359,6 @@ begin
   Self.DrawScence(Sender);
   {$R+}
 end;  // *)
-
-procedure TMainForm.FormResize(Sender: TObject);
-begin
-  {$R-}
-  Self.PanelFaceInfo.Left:=Self.ClientWidth - Self.PanelFaceInfo.Width;
-  //
-  Self.LabelCameraFPS.Top:=Self.ClientHeight - Self.LabelCameraFPS.Height;
-  Self.LabelCameraPos.Top:=Self.ClientHeight - Self.LabelCameraPos.Height;
-  Self.LabelCameraLeafId.Top:=Self.ClientHeight - Self.LabelCameraLeafId.Height;
-  Self.LabelStylePage.Top:=Self.ClientHeight - Self.LabelStylePage.Height;
-  //
-  Self.PanelRT.ClientWidth:=Self.PanelFaceInfo.Left - 4;
-  Self.PanelRT.ClientHeight:=Self.LabelCameraPos.Top - 4;
-  {$R+}
-end;
 
 procedure TMainForm.PanelRTResize(Sender: TObject);
 begin
@@ -1332,6 +1464,8 @@ end;
 procedure TMainForm.UpdateFaceVisualInfo();
 var
   i: Integer;
+  lpTexInfo: PTexInfo;
+  UV: tVec2f;
 begin
   {$R-}
   if (SelectedFaceIndex < 0) then
@@ -1344,30 +1478,58 @@ begin
   if (CurrFaceExt.BrushId = 0) then
     begin
       Self.EditFaceBrushIndex.Caption:=' World';
+      Self.EditFaceEntityName.Caption:=' ';
+      Self.EditFaceEntityClass.Caption:=' worldspawn';
     end
   else
     begin
       Self.EditFaceBrushIndex.Caption:=' *' + IntToStr(CurrFaceExt.BrushId);
+      i:=FindEntityByBModelIndex(@Map.Entities[0], Map.CountEntities, CurrFaceExt.BrushId);
+      if (i >= 0) then
+        begin
+          Self.EditFaceEntityName.Caption:=' ' + Map.Entities[i].TargetName;
+          Self.EditFaceEntityClass.Caption:=' ' + Map.Entities[i].ClassName;
+        end;
     end;
   Self.EditFacePlaneIndex.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.iPlane);
   Self.EditFaceCountVertex.Caption:=' ' + IntToStr(CurrFaceExt.Polygon.CountVertecies);
   Self.EditFaceTexInfo.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.iTextureInfo);
 
+  Self.EditFacePlaneX.Caption:=' ' + FloatToStrFixed(CurrFaceExt.Polygon.Plane.Normal.x);
+  Self.EditFacePlaneY.Caption:=' ' + FloatToStrFixed(CurrFaceExt.Polygon.Plane.Normal.y);
+  Self.EditFacePlaneZ.Caption:=' ' + FloatToStrFixed(CurrFaceExt.Polygon.Plane.Normal.z);
+  Self.EditFacePlaneD.Caption:=' ' + FloatToStrFixed(CurrFaceExt.Polygon.Plane.Dist);
+  Self.EditFacePlaneF.Caption:=' ' + PlaneTypeToStrExt(
+    Map.PlaneLump[CurrFaceExt.PlaneIndex].AxisType
+  );
+
+  lpTexInfo:=@Map.TexInfoLump[CurrFaceExt.BaseFace.iTextureInfo];
+  Self.EditFaceTexSx.Caption:=' ' + FloatToStr(lpTexInfo.vS.x);
+  Self.EditFaceTexSy.Caption:=' ' + FloatToStr(lpTexInfo.vS.y);
+  Self.EditFaceTexSz.Caption:=' ' + FloatToStr(lpTexInfo.vS.z);
+  Self.EditFaceTexSShift.Caption:=' ' + FloatToStr(lpTexInfo.fSShift);
+  Self.EditFaceTexTx.Caption:=' ' + FloatToStr(lpTexInfo.vT.x);
+  Self.EditFaceTexTy.Caption:=' ' + FloatToStr(lpTexInfo.vT.y);
+  Self.EditFaceTexTz.Caption:=' ' + FloatToStr(lpTexInfo.vT.z);
+  Self.EditFaceTexTShift.Caption:=' ' + FloatToStr(lpTexInfo.fTShift);
+  Self.EditFaceTexFlags.Caption:=' 0x' + IntToHex(lpTexInfo.nFlags, 8);
+
+  Self.EditTexIndex.Caption:=' ' + IntToStr(CurrFaceExt.Wad3TextureIndex);
   Self.EditTexName.Caption:=' ' + PAnsiChar(CurrFaceExt.TexName);
   Self.EditTexSize.Caption:=' ' +
     IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].nWidth)
     + 'x' +
     IntToStr(Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex].nHeight);
 
-  Self.EditLmpSize.Caption:='';
+  Self.EditLmpSize.Caption:=' (Approx.) ' + IntToStr(CurrFaceExt.LmpSize.x) + 'x' +
+    IntToStr(CurrFaceExt.LmpSize.y);
   Self.EditLmpStyle1.Caption:='';
   Self.EditLmpStyle2.Caption:='';
   Self.EditLmpStyle3.Caption:='';
   if (CurrFaceExt.CountLightStyles > 0) then
     begin
-      Self.EditLmpSize.Caption:=' ' + IntToStr(CurrFaceExt.LmpSize.X) + 'x' +
-        IntToStr(CurrFaceExt.LmpSize.Y);
-
+      Self.EditLmpSize.Caption:=' ' + IntToStr(CurrFaceExt.LmpSize.x) + 'x' +
+        IntToStr(CurrFaceExt.LmpSize.y);
       if (CurrFaceExt.BaseFace.nStyles[1] >= 0) then
         begin
           i:=FindLightStylePair(
@@ -1376,7 +1538,7 @@ begin
             CurrFaceExt.BaseFace.nStyles[1]
           );
           Self.EditLmpStyle1.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.nStyles[1]) +
-            ': "' + Map.LightStylesList[i].TargetName + '"';
+            ': ' + Map.LightStylesList[i].TargetName;
         end;
       if (CurrFaceExt.BaseFace.nStyles[2] >= 0) then
         begin
@@ -1386,7 +1548,7 @@ begin
             CurrFaceExt.BaseFace.nStyles[2]
           );
           Self.EditLmpStyle2.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.nStyles[2]) +
-            ': "' + Map.LightStylesList[i].TargetName + '"';
+            ': ' + Map.LightStylesList[i].TargetName;
         end;
       if (CurrFaceExt.BaseFace.nStyles[3] >= 0) then
         begin
@@ -1396,7 +1558,7 @@ begin
             CurrFaceExt.BaseFace.nStyles[3]
           );
           Self.EditLmpStyle3.Caption:=' ' + IntToStr(CurrFaceExt.BaseFace.nStyles[3]) +
-            ': "' + Map.LightStylesList[i].TargetName + '"';
+            ': ' + Map.LightStylesList[i].TargetName;
         end;
     end;
 
@@ -1417,6 +1579,12 @@ begin
     end;
   Self.ImagePreviewBT.Canvas.Draw(0, 0, BaseThumbnailBMP);
 
+  GetTexureCoordST(TraceInfo.Point.Vec3f, lpTexInfo^, UV);
+  Self.EditFaceTexUV.Caption:=FloatToStrFixed(UV.x) + ' ' + FloatToStrFixed(UV.y);
+  UV.x:=(UV.x*inv16 - CurrFaceExt.LmpMin.x + 0.5);
+  UV.y:=(UV.y*inv16 - CurrFaceExt.LmpMin.y + 0.5);
+  Self.EditFaceLmpUV.Caption:=FloatToStrFixed(UV.x) + ' ' + FloatToStrFixed(UV.y);
+
   Self.Update();
   {$R+}
 end;
@@ -1426,10 +1594,29 @@ begin
   {$R-}
   Self.EditFaceIndex.Caption:='';
   Self.EditFaceBrushIndex.Caption:='';
+  Self.EditFaceEntityName.Caption:=' Entity Targetname';
+  Self.EditFaceEntityClass.Caption:=' Entity Classname';
   Self.EditFacePlaneIndex.Caption:='';
   Self.EditFaceCountVertex.Caption:='';
   Self.EditFaceTexInfo.Caption:='';
 
+  Self.EditFacePlaneX.Caption:='';
+  Self.EditFacePlaneY.Caption:='';
+  Self.EditFacePlaneZ.Caption:='';
+  Self.EditFacePlaneD.Caption:='';
+  Self.EditFacePlaneF.Caption:='';
+
+  Self.EditFaceTexSx.Caption:='';
+  Self.EditFaceTexSy.Caption:='';
+  Self.EditFaceTexSz.Caption:='';
+  Self.EditFaceTexSShift.Caption:='';
+  Self.EditFaceTexTx.Caption:='';
+  Self.EditFaceTexTy.Caption:='';
+  Self.EditFaceTexTz.Caption:='';
+  Self.EditFaceTexTShift.Caption:='';
+  Self.EditFaceTexFlags.Caption:='';
+
+  Self.EditTexIndex.Caption:='';
   Self.EditTexName.Caption:='';
   Self.EditTexSize.Caption:='';
   Self.ImagePreviewBT.Canvas.Brush.Color:=clBlack;
@@ -1439,6 +1626,9 @@ begin
   Self.EditLmpStyle1.Caption:='';
   Self.EditLmpStyle2.Caption:='';
   Self.EditLmpStyle3.Caption:='';
+
+  Self.EditFaceTexUV.Caption:='';
+  Self.EditFaceLmpUV.Caption:='';
 
   Self.RadioGroupLmp.Items.Clear();
   Self.RadioButtonMip0.Checked:=True;
@@ -1530,6 +1720,151 @@ begin
   {$R+}
 end;
 
+procedure TMainForm.ButtonDeleteLmpClick(Sender: TObject);
+var
+  i: Integer;
+begin
+  {$R-}
+  if (SelectedFaceIndex < 0) then Exit;
+  if (Self.RadioGroupLmp.ItemIndex >= CurrFaceExt.CountLightStyles) then Exit;
+  if (Self.RadioGroupLmp.ItemIndex < 0) then Exit;
+  if (CurrFaceExt.CountLightmaps <= 0) then Exit;
+
+
+  // Remove lightmap from face do not resolve lightmap Megatextures
+  if (Self.RadioGroupLmp.ItemIndex = 0) then
+    begin
+      // Remove all lightmaps, include all styles
+      i:=MessageDlg(
+            'Rremoving the zero lightmap style will be followed by the complete'
+            + ' removal of all other styles for this Face. Do you want continue'
+            + ' "delete all lightmap styles"?',
+            mtWarning, [mbYes, mbNo], 0
+          );
+      if (i <> mrYes) then Exit;
+
+      SetLength(CurrFaceExt.Lightmaps, 0);
+      CurrFaceExt.CountLightmaps:=0;
+      CurrFaceExt.CountLightStyles:=0;
+      PDWORD(@CurrFaceExt.BaseFace.nStyles)^:=$FFFFFFFF;
+      CurrFaceExt.LmpMegaId:=MEGATEXTURE_DUMMY_MEGAID;
+      CurrFaceExt.LmpRegionId:=MEGATEXTURE_DUMMY_REGIONID;
+      CurrFaceExt.isDummyLightmaps:=True;
+      SetLength(CurrFaceExt.LmpMegaCoords, CurrFaceExt.Polygon.CountVertecies);
+      for i:=0 to (CurrFaceExt.Polygon.CountVertecies - 1) do
+        begin
+          CurrFaceExt.LmpMegaCoords[i]:=VEC_ZERO_2F;
+        end;
+    end
+  else
+    begin
+      // Remove current style, with shift "upper" styles down
+      Dec(CurrFaceExt.CountLightStyles);
+      CurrFaceExt.CountLightmaps:=CurrFaceExt.LmpSquare*CurrFaceExt.CountLightStyles;
+      for i:=Self.RadioGroupLmp.ItemIndex to (CurrFaceExt.CountLightStyles - 1) do
+        begin
+          CurrFaceExt.BaseFace.nStyles[i]:=CurrFaceExt.BaseFace.nStyles[i + 1];
+        end;
+      CurrFaceExt.BaseFace.nStyles[CurrFaceExt.CountLightStyles]:=-1;
+      for i:=Self.RadioGroupLmp.ItemIndex*CurrFaceExt.LmpSquare to
+        (CurrFaceExt.CountLightmaps - 1) do
+        begin
+          CurrFaceExt.Lightmaps[i]:=CurrFaceExt.Lightmaps[i + CurrFaceExt.LmpSquare];
+        end;
+      SetLength(CurrFaceExt.Lightmaps, CurrFaceExt.CountLightmaps);
+      for i:=Self.RadioGroupLmp.ItemIndex*CurrFaceExt.Polygon.CountVertecies to
+        (CurrFaceExt.CountLightStyles*CurrFaceExt.Polygon.CountVertecies) do
+        begin
+          CurrFaceExt.LmpMegaCoords[i]:=CurrFaceExt.LmpMegaCoords[i + CurrFaceExt.Polygon.CountVertecies];
+        end;
+      SetLength(CurrFaceExt.LmpMegaCoords, CurrFaceExt.Polygon.CountVertecies*CurrFaceExt.CountLightStyles);
+    end;
+    
+  // Rebuild light entities and styles
+  RebuildEntityLightStylesList(@Map);
+  Self.UpdateFaceVisualInfo();
+  {$R+}
+end;
+
+procedure TMainForm.ButtonAddLmpClick(Sender: TObject);
+var
+  i, j: Integer;
+begin
+  {$R-}
+  if (SelectedFaceIndex < 0) then Exit;
+
+  if (CurrFaceExt.CountLightStyles <= 0) then
+    begin
+      // Case when no lightmap data to face - then add zero style, but if face
+      // don't contain special texture (texinfo flags = 0)
+      if (Map.TexInfoLump[CurrFaceExt.BaseFace.iTextureInfo].nFlags <> 0) then
+        begin
+          ShowMessage(
+            'Face reference to Texture with special bsp flag for no lightmaps!' + LF +
+            'Sorry, creation lightmaps for flagged textures unsupported in current program version.'
+          );
+          Exit;
+        end;
+      if ((CurrFaceExt.LmpSize.x <= 2) or (CurrFaceExt.LmpSize.y <= 2) or
+        (CurrFaceExt.LmpSize.x >= MEGATEXTURE_SIZE) or
+        (CurrFaceExt.LmpSize.y >= MEGATEXTURE_SIZE)) then
+        begin
+          ShowMessage(
+            'Face contain invalid size for adding lightmaps: ' +
+            IntToStr(CurrFaceExt.LmpSize.x) + 'x' + IntToStr(CurrFaceExt.LmpSize.y) + LF +
+            'size must be great or equal 2x2 and less then ' +
+            IntToStr(MEGATEXTURE_SIZE) + 'x' + IntToStr(MEGATEXTURE_SIZE) + '!'
+          );
+          Exit;
+        end;
+
+      CurrFaceExt.CountLightStyles:=1;
+      CurrFaceExt.CountLightmaps:=CurrFaceExt.LmpSquare;
+      CurrFaceExt.BaseFace.nStyles[0]:=0;
+      CurrFaceExt.isDummyLightmaps:=False;
+      SetLength(CurrFaceExt.Lightmaps, CurrFaceExt.CountLightmaps);
+      SetLength(CurrFaceExt.LmpMegaCoords, CurrFaceExt.Polygon.CountVertecies);
+      ZeroFillChar(@CurrFaceExt.Lightmaps[0], CurrFaceExt.CountLightmaps);
+      
+      LightmapMegatexture.Clear();
+      Self.GenerateLightmapMegatexture();
+      Self.UpdateFaceVisualInfo();
+      Exit;
+    end;
+
+  if (CurrFaceExt.CountLightStyles = 4) then
+    begin
+      ShowMessage('Face already have all 4 light styles, cannot add more!');
+      Exit;
+    end;
+
+  // case where CurrFaceExt.CountLightStyles = 1..3, where we can add only named styles
+  i:=StrToIntDef(InputBox(
+    'Add new lightmap to Face...',
+    'Please, select light style for add in Face from Table:' + LF
+    + ShowLightStylesTable(@Map.LightStylesList[0], Map.CountLightStyles),
+    '-1'), -1
+  );
+  j:=FindLightStylePair(@Map.LightStylesList[0], Map.CountLightStyles, i);
+  if (j < 0) then
+    begin
+      ShowMessage('Invalid style input!');
+      Exit;
+    end;
+
+  Inc(CurrFaceExt.CountLightStyles);
+  CurrFaceExt.BaseFace.nStyles[CurrFaceExt.CountLightStyles - 1]:=i;
+  Inc(CurrFaceExt.CountLightmaps, CurrFaceExt.LmpSquare);
+  SetLength(CurrFaceExt.Lightmaps, CurrFaceExt.CountLightmaps);
+  SetLength(CurrFaceExt.LmpMegaCoords,
+    CurrFaceExt.CountLightStyles*CurrFaceExt.Polygon.CountVertecies);
+
+  LightmapMegatexture.Clear();
+  Self.GenerateLightmapMegatexture();
+  Self.UpdateFaceVisualInfo();
+  {$R+}
+end;
+
 procedure TMainForm.ButtonLoadTexClick(Sender: TObject);
 var
   i: Integer;
@@ -1545,8 +1880,8 @@ begin
       if (CurrFaceExt.isDummyTexture) then
         begin
           CurrWad3Texture.PaletteColors:=256;
-          AllocTexture(CurrWad3Texture^);
-          AllocPalette(CurrWad3Texture^);
+          AllocTexture(CurrWad3Texture);
+          AllocPalette(CurrWad3Texture);
           if (UpdateTextureFromBitmap(Self.OpenDialogBMP.FileName, CurrWad3Texture, 0)) then
             begin
               CurrFaceExt.TexName:=@CurrWad3Texture.szName;
@@ -1581,7 +1916,7 @@ begin
           else
             begin
               ShowMessage('Error create new texture: Cannot open and read Bitmap file!');
-              FreeTextureAndPalette(CurrWad3Texture^);
+              FreeTextureAndPalette(CurrWad3Texture);
             end;
         end
       else
@@ -1636,6 +1971,26 @@ begin
   );
   {$R+}
 end;
+
+procedure TMainForm.ButtonDeleteTexClick(Sender: TObject);
+var
+  CurrWad3Texture: PWad3Texture;
+begin
+  {$R-}
+  if ((SelectedFaceIndex < 0) or (CurrFaceExt.isDummyTexture)) then Exit;
+
+  BasetextureMng.DeleteBasetexture(CurrFaceExt.TexRenderId);
+  CurrWad3Texture:=@Map.TextureLump.Wad3Textures[CurrFaceExt.Wad3TextureIndex];
+  FreeTextureAndPalette(CurrWad3Texture);
+  CurrWad3Texture.nOffsets[0]:=0;
+  CurrWad3Texture.nOffsets[1]:=0;
+  CurrWad3Texture.nOffsets[2]:=0;
+  CurrWad3Texture.nOffsets[3]:=0;
+
+  Self.UpdateFaceVisualInfo();
+  {$R+}
+end;
+
 
 
 procedure TMainForm.RadioButtonMip0Click(Sender: TObject);
@@ -1776,6 +2131,9 @@ begin
   Self.GotoBModelIdSubMenu.Enabled:=False;
   Self.GotoEntTGNSubMenu.Enabled:=False;
 
+  Self.LmpPixelModeMenu.Checked:=False;
+  Self.TexPixelModeMenu.Checked:=False;
+
   FreeMapBSP(@Map);
 
   CameraLeafId:=0;
@@ -1853,12 +2211,60 @@ begin
         + 'Max count vertecies per Face: ' + IntToStr(Map.MaxVerteciesPerFace) + LF
         + 'Avg count vertecies per Face: '
           + FloatToStrF(Map.AvgVerteciesPerFace/Map.CountFaces, ffFixed, 2, 2) + LF
+        + 'Total Face triangles on Map: ' + IntToStr(Map.TotalTrianglesCount) + LF
         + 'Count generated ' + IntToStr(MEGATEXTURE_SIZE) + 'x'
           + IntToStr(MEGATEXTURE_SIZE)
           + ' Lightmap 2D Megatextures: '
-          + IntToStr(LightmapMegatexture.CountMegatextures)
+          + IntToStr(LightmapMegatexture.CountMegatextures) + LF
+        + 'Max lightmap size in Megatexture: '
+          + IntToStr(LightmapMegatexture.MaxRegionSizeX) + 'x'
+          + IntToStr(LightmapMegatexture.MaxRegionSizeY) + LF
+        + 'Max possible lightmap size on map: '
+          + IntToStr(Map.MaxLightmapSize.x) + 'x' + IntToStr(Map.MaxLightmapSize.y)
       );
     end;
+  {$R+}
+end;
+
+procedure TMainForm.ShowFaceVertexHistogramMenuClick(Sender: TObject);
+var
+  i: Integer;
+  s: String;
+begin
+  {$R-}
+  if (isBspLoad) then
+    begin
+      s:='';
+      for i:=0 to (HISTOGRAM_FACE_VERTEX_SIZE - 1) do
+        begin
+          s:=s + IntToStr(i) + ': '
+            + FloatToStrF(100*Map.FaceVertexHist[i]/Map.CountFaces, ffFixed, 4, 2)
+            + '%; ' + IntToStr(Map.FaceVertexHist[i])
+            + '; ' + FloatToStrF(100*Map.WindingHist[i]/Map.CountFaces, ffFixed, 4, 2)
+            + '%; ' + IntToStr(Map.WindingHist[i]) + LF;
+        end;
+      ShowMessage(
+          'Vertex per Face histogram (first value - count of vertex per face,' + LF
+        + 'second and third value - % from all faces and count of faces, ' + LF
+        + 'four and five value - same with remove colinear vertex)' + LF
+        + s
+        + 'Faces with count of vertex >= ' + IntToStr(HISTOGRAM_FACE_VERTEX_SIZE)
+        + ': ' + FloatToStrF(100*Map.FaceVertexHistOutOfRangeCnt/Map.CountFaces, ffFixed, 4, 2)
+        + '%; ' + IntToStr(Map.FaceVertexHistOutOfRangeCnt)
+        + '; ' + FloatToStrF(100*Map.WindingHistOutOfRangeCnt/Map.CountFaces, ffFixed, 4, 2)
+        + '%; ' + IntToStr(Map.WindingHistOutOfRangeCnt) + LF
+        + 'Total count of faces on map: ' + IntToStr(Map.CountFaces)
+      );
+    end;
+  {$R+}
+end;
+
+procedure TMainForm.ShowLightStylesMenuClick(Sender: TObject);
+begin
+  {$R-}
+  ShowMessage('Light styles on map, '
+    + ShowLightStylesTable(@Map.LightStylesList[0], Map.CountLightStyles)
+  );
   {$R+}
 end;
 
@@ -1893,6 +2299,13 @@ procedure TMainForm.WireframeHighlighEntBrushesMenuClick(Sender: TObject);
 begin
   {$R-}
   Self.WireframeHighlighEntBrushesMenu.Checked:=not Self.WireframeHighlighEntBrushesMenu.Checked;
+  {$R+}
+end;
+
+procedure TMainForm.DrawFaceContourMenuClick(Sender: TObject);
+begin
+  {$R-}
+  Self.DrawFaceContourMenu.Checked:=not Self.DrawFaceContourMenu.Checked;
   {$R+}
 end;
 
@@ -1946,12 +2359,28 @@ begin
   {$R+}
 end;
 
+procedure TMainForm.DrawEntityBrushesMenuClick(Sender: TObject);
+begin
+  {$R-}
+  Self.DrawEntityBrushesMenu.Checked:=not Self.DrawEntityBrushesMenu.Checked;
+  Self.GetFaceRenderList();
+  {$R+}
+end;
+
 
 procedure TMainForm.LmpPixelModeMenuClick(Sender: TObject);
 begin
   {$R-}
   LightmapMegatexture.SetFiltrationMode(Self.LmpPixelModeMenu.Checked);
   Self.LmpPixelModeMenu.Checked:=not Self.LmpPixelModeMenu.Checked;
+  {$R+}
+end;
+
+procedure TMainForm.TexPixelModeMenuClick(Sender: TObject);
+begin
+  {$R-}
+  BasetextureMng.SetFiltrationMode(Self.TexPixelModeMenu.Checked);
+  Self.TexPixelModeMenu.Checked:=not Self.TexPixelModeMenu.Checked;
   {$R+}
 end;
 
@@ -2005,12 +2434,12 @@ end;
 
 procedure TMainForm.GotoCamPosSubMenuClick(Sender: TObject);
 var
-  tmpVec3f: tVec3f;
+  tmpVec: tVec4f;
 begin
   {$R-}
-  if (StrToVec(InputBox('Go to...', 'Position [X Y Z]', '0 0 0'), @tmpVec3f)) then
+  if (StrToVec(InputBox('Go to...', 'Position [X Y Z]', '0 0 0'), @tmpVec)) then
     begin
-      Self.Camera.ViewPosition:=tmpVec3f;
+      Self.Camera.ViewPosition:=tmpVec;
     end;
   {$R+}
 end;
@@ -2018,7 +2447,8 @@ end;
 procedure TMainForm.GotoFaceIdSubmenuClick(Sender: TObject);
 var
   tmpFaceId: Integer;
-  tmpVec3f: tVec3f;
+  tmpPolyPtr: PPolygon3f;
+  tmpVec: tVec4f;
 begin
   {$R-}
   if (Unit1.isBspLoad = False) then Exit;
@@ -2026,11 +2456,11 @@ begin
   tmpFaceId:=StrToIntDef(InputBox('Go to...', 'Face Id', '-1'), -1);
   if (tmpFaceId >=0) and (tmpFaceId < Map.CountFaces) then
     begin
-      GetPolyCenter(@Map.FaceExtList[tmpFaceId].Polygon, @tmpVec3f);
-      tmpVec3f.x:=tmpVec3f.x + Map.FaceExtList[tmpFaceId].Polygon.Plane.Normal.x;
-      tmpVec3f.y:=tmpVec3f.y + Map.FaceExtList[tmpFaceId].Polygon.Plane.Normal.y;
-      tmpVec3f.z:=tmpVec3f.z + Map.FaceExtList[tmpFaceId].Polygon.Plane.Normal.z;
-      Self.Camera.ViewPosition:=tmpVec3f;
+      tmpPolyPtr:=@Map.FaceExtList[tmpFaceId].Polygon;
+      tmpVec.x:=tmpPolyPtr.Center.x + tmpPolyPtr.Plane.Normal.x;
+      tmpVec.y:=tmpPolyPtr.Center.y + tmpPolyPtr.Plane.Normal.y;
+      tmpVec.z:=tmpPolyPtr.Center.z + tmpPolyPtr.Plane.Normal.z;
+      Self.Camera.ViewPosition:=tmpVec;
     end;
   {$R+}
 end;
@@ -2038,7 +2468,7 @@ end;
 procedure TMainForm.GotoVisLeafIdSubMenuClick(Sender: TObject);
 var
   tmpVisLeafId: Integer;
-  tmpVec3f: tVec3f;
+  tmpVec: tVec4f;
 begin
   {$R-}
   if (Unit1.isBspLoad = False) then Exit;
@@ -2046,8 +2476,8 @@ begin
   tmpVisLeafId:=StrToIntDef(InputBox('Go to...', 'VisLeaf Id', '0'), -1);
   if (tmpVisLeafId > 0) and (tmpVisLeafId < Map.CountVisLeafWithPVS) then
     begin
-      GetCenterBBOXf(Map.VisLeafExtList[tmpVisLeafId].BBOXf, @tmpVec3f);
-      Self.Camera.ViewPosition:=tmpVec3f;
+      GetCenterBBOX4f(Map.VisLeafExtList[tmpVisLeafId].BBOX4f, @tmpVec);
+      Self.Camera.ViewPosition:=tmpVec;
     end;
   {$R+}
 end;
@@ -2055,7 +2485,7 @@ end;
 procedure TMainForm.GotoBModelIdSubMenuClick(Sender: TObject);
 var
   tmpBModelId: Integer;
-  tmpVec3f: tVec3f;
+  tmpVec: tVec4f;
 begin
   {$R-}
   if (Unit1.isBspLoad = False) then Exit;
@@ -2063,8 +2493,8 @@ begin
   tmpBModelId:=StrToIntDef(InputBox('Go to...', 'BModel Id', '0'), -1);
   if (tmpBModelId >= 0) and (tmpBModelId < Map.CountBrushModels) then
     begin
-      GetCenterBBOXf(Map.BrushModelExtList[tmpBModelId].BaseBModel.BBOXf, @tmpVec3f);
-      Self.Camera.ViewPosition:=tmpVec3f;
+      GetCenterBBOX4f(Map.BrushModelExtList[tmpBModelId].ShiftBBOX4f, @tmpVec);
+      Self.Camera.ViewPosition:=tmpVec;
     end;
   {$R+}
 end;
@@ -2127,8 +2557,8 @@ begin
                       if (Map.TextureLump.Wad3Textures[j].MipData[0] = nil) then
                         begin
                           Map.TextureLump.Wad3Textures[j].PaletteColors:=WAD3.Wad3Textures[i].PaletteColors;
-                          AllocTexture(Map.TextureLump.Wad3Textures[j]);
-                          AllocPalette(Map.TextureLump.Wad3Textures[j]);
+                          AllocTexture(@Map.TextureLump.Wad3Textures[j]);
+                          AllocPalette(@Map.TextureLump.Wad3Textures[j]);
                           CopyPixelData(@WAD3.Wad3Textures[i], @Map.TextureLump.Wad3Textures[j]);
                           BasetextureMng.AppendBasetexture(Map.TextureLump.Wad3Textures[j]);
                         end
@@ -2169,7 +2599,7 @@ begin
           ShowMessage('Error open WAD3 File !');
         end;
     end;
-  FreeTextureLump(WAD3);
+  FreeTextureLump(@WAD3);
   {$R+}
 end;
 
@@ -2229,6 +2659,8 @@ begin
 
   Self.RenderContext.DeleteRenderingContext();
   Self.RenderContext.DeleteManager();
+
+  Self.ProfileTimer.DeleteTimer();
   {$R+}
 end;
 

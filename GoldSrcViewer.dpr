@@ -21,7 +21,6 @@ uses
   UnitMapHeader in 'Modules\GoldSrcBSP\UnitMapHeader.pas',
   UnitBSPstruct in 'Modules\GoldSrcBSP\UnitBSPstruct.pas',
   UnitEntity in 'Modules\GoldSrcBSP\UnitEntity.pas',
-  UnitPlane in 'Modules\GoldSrcBSP\UnitPlane.pas',
   UnitTexture in 'Modules\GoldSrcBSP\UnitTexture.pas',
   UnitNode in 'Modules\GoldSrcBSP\UnitNode.pas',
   UnitFace in 'Modules\GoldSrcBSP\UnitFace.pas',
@@ -31,7 +30,9 @@ uses
   UnitBrushModel in 'Modules\GoldSrcBSP\UnitBrushModel.pas',
   UnitLightEntity in 'Modules\GoldSrcBSP\UnitLightEntity.pas',
   UnitRescaling2D in 'Modules\UnitRescaling2D.pas',
-  UnitClipNode in 'Modules\GoldSrcBSP\UnitClipNode.pas';
+  UnitClipNode in 'Modules\GoldSrcBSP\UnitClipNode.pas',
+  UnitQueryPerformanceProfiler in 'Modules\UnitQueryPerformanceProfiler.pas',
+  UnitImageTGA in 'Modules\UnitImageTGA.pas';
 
 {$R *.res}
 var
@@ -39,6 +40,7 @@ var
   
 begin
   Application.Initialize;
+  Application.Title := 'GoldSrc BSP Editor';
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.
