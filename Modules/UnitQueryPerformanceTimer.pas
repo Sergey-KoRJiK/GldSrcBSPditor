@@ -1,10 +1,14 @@
 unit UnitQueryPerformanceTimer;
 
-// this module created By Sergey-KoRJiK, 2020
+// Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 interface
 
-uses SysUtils, Windows, Classes;
+uses
+  SysUtils,
+  Windows,
+  Classes;
 
 type CQueryPerformanceTimer = class
   private

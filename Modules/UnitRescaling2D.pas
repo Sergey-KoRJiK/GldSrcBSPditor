@@ -1,5 +1,8 @@
 unit UnitRescaling2D;
 
+// Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
+
 interface
 
 uses

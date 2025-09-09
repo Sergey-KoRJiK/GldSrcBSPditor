@@ -1,6 +1,7 @@
 unit UnitOpenGLFPSCamera;
 
 // Copyright (c) 2019 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 // First Person View OpenGL Camera class
 // All angle values in radians
@@ -16,52 +17,51 @@ uses
   UnitVec;
 
 const
-  CameraPolarAngleMax: GLfloat = Pi*0.5;
-  CameraPolarAngleMin: GLfloat = -Pi*0.5;
-  AngleToRadian: GLfloat = Pi/180.0;
-  RadianToAngle: GLfloat = 180.0/Pi;
-  Pi360: GLfloat = Pi/360.0;
-
-const
-  FieldOfViewMin: GLfloat = 45.0;
-  FieldOfViewMax: GLfloat = 120.0;
-  zFarMin: GLfloat = 2.0;
-  zNear: GLfloat = 1.0;
+  CameraPolarAngleMax : GLfloat = Pi*0.5;
+  CameraPolarAngleMin : GLfloat = -Pi*0.5;
+  AngleToRadian       : GLfloat = Pi/180.0;
+  RadianToAngle       : GLfloat = 180.0/Pi;
+  Pi360               : GLfloat = Pi/360.0;
+  //
+  FieldOfViewMin      : GLfloat = 45.0;
+  FieldOfViewMax      : GLfloat = 120.0;
+  zFarMin             : GLfloat = 2.0;
+  zNear               : GLfloat = 1.0;
 
 const
   // Camera see at that pos to Axis origin.
-  DefaultCameraPos: tVec3f = (X: 50.0; Y: 50.0; Z: 50.0);
+  DefaultCameraPos: tVec4f = (x: 50.0; y: 50.0; z: 50.0; w: 0.0;);
   DefaultCameraPolarAngle: GLfloat = -0.523599;
   DefaultCameraAzimutalAngle: GLfloat = 0.785398;
 
 type CFirtsPersonViewCamera = class
   private
-    CModelMat4f: tMat4f;
-    CProjMat4f: tMat4f;
+    CModelMat4f : tMat4f;
+    CProjMat4f  : tMat4f;
     //
-    CSizeX, CSizeY, CAspectRation: GLfloat;
-    CFieldOfView, CZFar: GLfloat;
-    CWidth, CHeight: GLint;
+    CSizeX, CSizeY, CAspectRation : GLfloat;
+    CFieldOfView, CZFar           : GLfloat;
+    CWidth, CHeight               : GLint;
     // prefix N for vectors mean Normalized
-    CPos, CNDir, CNUp, CNSide: tVec3f; // (Dir, Side, Up) is orthogonal basis
-    CAlpha, CBetta: GLfloat;
-    // Alpha angle make rotate around CNup and change CNDir and CNSide
-    // Betta angle make rotate around CNSide and change CNup and CNDir
+    CPos, CNDir, CNUp, CNSide     : tVec4f; // (Dir, Side, Up) is orthogonal basis
+    CAlpha, CBetta                : GLfloat;
+    // Alpha angle rotate around CNup and change CNDir and CNSide
+    // Betta angle rotate around CNSide and change CNup and CNDir
     //
-    FSin, FCos, FCosDivAspect: GLfloat;
+    FSin, FCos, FCosDivAspect     : GLfloat;
     //
     procedure WrapCAlpha();
     procedure ClampPolarAngle();
-    procedure SetViewPosition(const Pos: tVec3f);
+    procedure SetViewPosition(const Pos: tVec4f);
     procedure RebuildModelView();
     procedure UpdateModelViewTranslate();
   public
     property AzimutalAngle: GLfloat read CAlpha;  // [radian]
     property PolarAngle: GLfloat read CBetta;     // [radian]
-    property ViewPosition: tVec3f read CPos write SetViewPosition;
-    property ViewDirection: tVec3f read CNDir;
-    property UpVector: tVec3f read CNUp;
-    property SideVector: tVec3f read CNSide;
+    property ViewPosition: tVec4f read CPos write SetViewPosition;
+    property ViewDirection: tVec4f read CNDir;
+    property UpVector: tVec4f read CNUp;
+    property SideVector: tVec4f read CNSide;
     property DistToAxis: GLfloat read CModelMat4f[14]; // camera distance to Axis origin
     // Camera CNDir with DistToAxis give Camera Plane equation
     //
@@ -70,10 +70,10 @@ type CFirtsPersonViewCamera = class
     property ScreenHeight: GLint read CHeight;
     property zFar: GLfloat read CZFar;
     //
-    constructor CreateNewCamera(const Pos: tVec3f; const PolarAngle, AzimutalAngle: GLfloat);
+    constructor CreateNewCamera(const Pos: tVec4f; const PolarAngle, AzimutalAngle: GLfloat);
     destructor DeleteCamera();
     //
-    procedure ResetCamera(const Pos: tVec3f; const PolarAngle, AzimutalAngle: GLfloat);
+    procedure ResetCamera(const Pos: tVec4f; const PolarAngle, AzimutalAngle: GLfloat);
     procedure StepForward(const Dist: GLfloat);
     procedure StepBackward(const Dist: GLfloat);
     procedure StepLeft(const Dist: GLfloat);
@@ -98,11 +98,17 @@ type CFirtsPersonViewCamera = class
 implementation
 
 
-constructor CFirtsPersonViewCamera.CreateNewCamera(const Pos: tVec3f;
-  const PolarAngle, AzimutalAngle: GLfloat);
+constructor CFirtsPersonViewCamera.CreateNewCamera(
+  const Pos: tVec4f; const PolarAngle, AzimutalAngle: GLfloat);
 begin
   {$R-}
   inherited;
+
+  Self.CPos:=Pos;
+  Self.CPos.w:=0.0;
+  Self.CNDir.w:=0.0;
+  Self.CNUp.w:=0.0;
+  Self.CNSide.w:=0.0;
 
   Self.CNSide.z:=0.0;
   Self.CModelMat4f:=IdentityMat4f;
@@ -179,10 +185,11 @@ asm
   {$R+}
 end;
 
-procedure CFirtsPersonViewCamera.SetViewPosition(const Pos: tVec3f);
+procedure CFirtsPersonViewCamera.SetViewPosition(const Pos: tVec4f);
 begin
   {$R-}
   Self.CPos:=Pos;
+  Self.CPos.w:=0;
 
   Self.UpdateModelViewTranslate();
   {$R+}
@@ -221,11 +228,12 @@ begin
   {$R+}
 end;
 
-procedure CFirtsPersonViewCamera.ResetCamera(const Pos: tVec3f;
+procedure CFirtsPersonViewCamera.ResetCamera(const Pos: tVec4f;
   const PolarAngle, AzimutalAngle: GLfloat);
 begin
   {$R-}
   Self.CPos:=Pos;
+  Self.CPos.w:=0;
 
   Self.CAlpha:=AzimutalAngle;
   Self.WrapCAlpha();
@@ -390,9 +398,11 @@ begin
   Ray.Dir.x:=x*Self.CNSide.x + y*Self.CNUp.x + Self.CNDir.x;
   Ray.Dir.y:=x*Self.CNSide.y + y*Self.CNUp.y + Self.CNDir.y;
   Ray.Dir.z:=y*Self.CNUp.z + Self.CNDir.z;
+  Ray.Dir.w:=0;
   NormalizeVec3f(@Ray.Dir);
 
   Ray.Start:=Self.CPos;
+  Ray.Start.w:=0;
   {$R+}
 end;
 

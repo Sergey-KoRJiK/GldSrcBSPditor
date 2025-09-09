@@ -1,5 +1,8 @@
 unit UnitBasetextureManager;
 
+// Copyright (c) 2020 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
+
 interface
 
 uses
@@ -42,17 +45,27 @@ type tBasetexture = record
 type PBasetexture = ^tBasetexture;
 type ABasetextyre = array of tBasetexture;
 
+const
+  BASETEXTURE_NULL: tBasetexture = (
+    Name: nil;
+    glId: 0;
+    Size: (x: 0; y: 0);
+    Pixels: nil;
+  );
+
 type CBasetextureManager = class
   private
     iCountTextures: Integer;
     iBinded: Integer;
     ListBT: array[0..BASETEXTURE_COUNT_MAX-1] of tBasetexture;
     isEnable: Boolean;
+    bLinearFilter: Boolean;
     //
     procedure GenerateThumbnailTexture(const BasetextureId, Index, Offset: Integer);
   public
     property CountBasetextures: Integer read iCountTextures;
     property IsEnableToRender: Boolean read isEnable;
+    property IsMinAndMagLinearFiltering: Boolean read bLinearFilter;
     //
     constructor CreateManager();
     destructor DeleteManager();
@@ -61,6 +74,7 @@ type CBasetextureManager = class
     function AppendBasetexture(const Basetexture: tWad3Texture): Boolean;
     function UpdateBasetexture(const Basetexture: tWad3Texture;
       const BasetextureId: Integer): Boolean;
+    function DeleteBasetexture(const BasetextureId: Integer): Boolean;
     //
     function GetBasetextureIdByName(const TexName: PTexName): Integer;
     function DrawThumbnailToBitmap(const ThumbnailBitmap: TBitmap;
@@ -70,6 +84,7 @@ type CBasetextureManager = class
     procedure UnbindBasetexture();
     //
     procedure SetBasetextureState(const isEnable: Boolean);
+    procedure SetFiltrationMode(const isLinearFiltration: Boolean);
   end;
 
 
@@ -85,13 +100,14 @@ begin
   Self.iBinded:=-1;
   ZeroFillChar(@Self.ListBT[0], SizeOf(tBasetexture)*BASETEXTURE_COUNT_MAX);
   Self.isEnable:=True;
+  Self.bLinearFilter:=True;
 
   // Initialize dummy white texture. Only this texture don't have Thumbnail
   Self.ListBT[0].Name:=@TEXNAME_DUMMY;
   Self.ListBT[0].Size.x:=BASETEXTURE_SIZE_MIN;
   Self.ListBT[0].Size.y:=BASETEXTURE_SIZE_MIN;
   Self.ListBT[0].Pixels:=SysGetMem(Round(BASETEXTURE_AREA_MIN*BASETEXTURE_LOD_FACTOR)*SizeOf(tRGBA8888));
-  FillChar255(PByte(Self.ListBT[0].Pixels), Round(BASETEXTURE_AREA_MIN*BASETEXTURE_LOD_FACTOR)*SizeOf(tRGBA8888));
+  FillChar0xFF(PByte(Self.ListBT[0].Pixels), Round(BASETEXTURE_AREA_MIN*BASETEXTURE_LOD_FACTOR)*SizeOf(tRGBA8888));
 
   glGenTextures(1, @Self.ListBT[0].glId);
   if (Self.ListBT[0].glId > 0) then
@@ -468,6 +484,24 @@ begin
   {$R+}
 end;
 
+function CBasetextureManager.DeleteBasetexture(const BasetextureId: Integer): Boolean;
+begin
+  {$R-}
+  if ((BasetextureId < 1) or (BasetextureId >= Self.iCountTextures)) then
+    begin
+      Result:=False;
+      Exit;
+    end;
+
+  if (Self.ListBT[BasetextureId].glId <> 0) then glDeleteTextures(1, @Self.ListBT[BasetextureId].glId);
+  if (Self.ListBT[BasetextureId].Pixels <> nil) then SysFreeMem(Self.ListBT[BasetextureId].Pixels);
+  Self.ListBT[BasetextureId]:=BASETEXTURE_NULL;
+  Self.ListBT[BasetextureId]:=Self.ListBT[0];
+
+  Result:=True;
+  {$R+}
+end;
+
 function CBasetextureManager.GetBasetextureIdByName(const TexName: PTexName): Integer;
 var
   i: Integer;
@@ -498,6 +532,11 @@ begin
     or (ThumbnailBitmap.Width <> BASETEXTURE_PREVIEW_SIZE)
     or (ThumbnailBitmap.Height <> BASETEXTURE_PREVIEW_SIZE)
     or (MipIndex < 0) or (MipIndex > 3)) then
+    begin
+      Result:=False;
+      Exit;
+    end;
+  if (Self.ListBT[BasetextureId].Name = TEXNAME_DUMMY) then
     begin
       Result:=False;
       Exit;
@@ -560,6 +599,37 @@ begin
   {$R-}
   Self.isEnable:=isEnable;
   if (isEnable = False) then Self.UnbindBasetexture();
+  {$R+}
+end;
+
+procedure CBasetextureManager.SetFiltrationMode(const isLinearFiltration: Boolean);
+var
+  i: Integer;
+begin
+  {$R-}
+  Self.bLinearFilter:=isLinearFiltration;
+  glActiveTextureARB(GL_TEXTURE0);
+  if (isLinearFiltration) then
+    begin
+      for i:=0 to (Self.iCountTextures - 1) do
+        begin
+          glBindTexture(GL_TEXTURE_2D, Self.ListBT[i].glId);
+          // GL_LINEAR / GL_NEAREST
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        end;
+    end
+  else
+    begin
+      for i:=0 to (Self.iCountTextures - 1) do
+        begin
+          glBindTexture(GL_TEXTURE_2D, Self.ListBT[i].glId);
+          // GL_LINEAR / GL_NEAREST
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        end;
+    end;
+  glBindTexture(GL_TEXTURE_2D, 0);
   {$R+}
 end;
 

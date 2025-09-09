@@ -1,6 +1,7 @@
 unit UnitOpenGLAdditional;
 
 // Copyright (c) 2019 Sergey-KoRJiK, Belarus
+// github.com/Sergey-KoRJiK
 
 interface
 
